@@ -1,0 +1,13 @@
+theme: creative-studio-2026
+colors:
+  primary: "#004f54"      # Transformative Teal (變革藍綠色)
+  secondary: "#f4f1ea"    # Cloud Dancer (雲舞暖白)
+  accent: "#ee9b00"       # Acacia Gold (金合歡黃)
+  neutral-dark: "#141e1e" # 深炭綠 (文字)
+typography:
+  serif: "Georgia, serif"
+  sans: "Microsoft JhengHei, sans-serif"
+spacing:
+  margin-default: "24px"
+  section-padding: "120px"
+  border-radius: "8px"

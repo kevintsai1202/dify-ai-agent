@@ -1,0 +1,12 @@
+{
+  "name": "dify-ai-agent-workshop",
+  "version": "1.0.0",
+  "description": "Dify AI Agent 與 Claude Desktop 視覺影音備課實戰工作坊教學網站",
+  "scripts": {
+    "serve": "npx serve ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}

@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dify AI Agent 與 Claude Desktop 視覺影音備課實戰工作坊</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- ===== sidebar (fixed left, navigation + progress) ===== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-eyebrow" id="brandProgram">設計時尚學院</div>
+        <div class="brand-title" id="brandTitle">Dify AI Agent 備課工作坊</div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="nav-progress" id="navProgress">
+        <div class="nav-progress-row">
+          <div class="nav-progress-label">整體完成度</div>
+          <div class="nav-progress-value" id="progressVal">0%</div>
+        </div>
+        <div class="nav-progress-bar">
+          <div class="nav-progress-fill" id="progressFill"></div>
+        </div>
+        <div class="nav-reset" id="resetBtn">重設學習進度</div>
+      </div>
+    </aside>
+
+    <!-- ===== main content area ===== -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-trail" id="topbarTrail">
+          課程大綱 &gt; <b>總覽</b>
+        </div>
+        <div class="topbar-spacer"></div>
+        <div class="topbar-quick">
+          <button class="theme-toggle" id="themeToggle" type="button" aria-label="切換主題">🌓</button>
+        </div>
+      </header>
+
+      <div class="content" id="content">
+        <!-- All sections rendered here by init() -->
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ===== Materials Detail Modal ===== -->
+  <div class="modal-overlay" id="materialModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">檔案預覽</div>
+        <div class="modal-close" id="modalClose">&times;</div>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="course-data.js"></script>
+  <script>
+  /* ============================================================
+   * Storage & State Management
+   * ============================================================ */
+  const STORE_KEY = 'dify_ai_agent_workshop_state_v1';
+  const store = {
+    load() {
+      try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { tasks: {}, quiz: {}, currentQuizIndex: 0 }; }
+      catch { return { tasks: {}, quiz: {}, currentQuizIndex: 0 }; }
+    },
+    save(s) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); },
+    reset() { localStorage.removeItem(STORE_KEY); }
+  };
+  let state = store.load();
+
+  /* ============================================================
+   * DOM Utilities
+   * ============================================================ */
+  const el = (tag, attrs = {}, ...children) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'class') node.className = v;
+      else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+      else if (v !== false && v != null) node.setAttribute(k, v);
+    }
+    for (const c of children.flat()) {
+      if (c == null || c === false) continue;
+      node.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    }
+    return node;
+  };
+  const clear = (node) => { while (node.firstChild) node.removeChild(node.firstChild); };
+
+  /* ============================================================
+   * Markdown Inline Helper (XSS Safe)
+   * ============================================================ */
+  function inlineMarkdown(str) {
+    const frag = document.createDocumentFragment();
+    if (!str) return frag;
+    // Simple bold/code/link parser
+    let index = 0;
+    const regex = /(\*\*|`|\[)(.*?)\1|(\bhttps?:\/\/\S+)/g;
+    let match;
+    let text = str;
+    
+    // We do simple string replacement for formatting:
+    // **bold** -> strong, `code` -> code, [text](url) -> link
+    let html = str
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.*?)`/g, '<code>$1</code>')
+      .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
+      
+    const div = el('span');
+    div.innerHTML = html;
+    return div;
+  }
+
+  /* ============================================================
+   * Routing & Navigation
+   * ============================================================ */
+  function scrollToSection(id) {
+    const target = document.getElementById(id);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+      // Update sidebar active status
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('data-target') === id) {
+          link.classList.add('active');
+        }
+      });
+      // Update topbar trail
+      const label = document.querySelector(`.nav-link[data-target="${id}"]`).textContent.trim();
+      const trail = document.getElementById('topbarTrail');
+      clear(trail);
+      trail.append('課程大綱 > ', el('b', {}, label));
+    }
+  }
+
+  /* ============================================================
+   * Render overview
+   * ============================================================ */
+  function renderOverview(meta) {
+    const root = el('section', { class: 'chapter', id: 'overview' });
+    
+    const header = el('header', {});
+    header.append(el('span', { class: 'chapter-num' }, 'WELCOME'));
+    header.append(el('h1', {}, meta.title));
+    root.append(header);
+
+    const desc = el('div', { class: 'lead' }, '本工作坊專為設計與時尚相關科系教師規劃，引導教師在無程式背景下，使用本地端 Agent Skills 與雲端 Dify 進行教案編寫、視覺評審與影音編程。');
+    root.append(desc);
+
+    const grid = el('div', { class: 'meta-grid' });
+    grid.append(el('div', {}, '適用對象'), el('div', {}, meta.audience));
+    grid.append(el('div', {}, '課程總時數'), el('div', {}, `${meta.hoursTotal} 小時 (半天實戰工作坊)`));
+    grid.append(el('div', {}, '實作場地'), el('div', {}, meta.classroom.name));
+    grid.append(el('div', {}, '教學小組'), el('div', {}, meta.instructor));
+    root.append(grid);
+
+    // Render daily schedule table
+    const tableHeader = el('h4', {}, '課程主題時程');
+    root.append(tableHeader);
+
+    const tbl = el('table', { class: 't' });
+    const thead = el('thead');
+    thead.append(el('tr', {}, el('th', {}, '時段'), el('th', {}, '單元 ID'), el('th', {}, '單元名稱與實作核心')));
+    tbl.append(thead);
+
+    const tbody = el('tbody');
+    window.COURSE.day1.units.forEach(u => {
+      const tr = el('tr', {});
+      tr.append(el('td', {}, u.timeRange));
+      tr.append(el('td', {}, u.id));
+      const link = el('a', { href: 'javascript:;', onclick: () => scrollToSection(`day1-${u.id}`) }, u.title);
+      tr.append(el('td', {}, link));
+      tbody.append(tr);
+    });
+    tbl.append(tbody);
+    root.append(tbl);
+
+    return root;
+  }
+
+  /* ============================================================
+   * Render shared case
+   * ============================================================ */
+  function renderSharedCase(sc) {
+    if (!sc) return null;
+    const root = el('section', { class: 'chapter', id: 'shared-case' });
+    
+    const header = el('header', {});
+    header.append(el('span', { class: 'chapter-num' }, 'CASE STUDY'));
+    header.append(el('h2', {}, sc.title));
+    root.append(header);
+
+    const bento = el('div', { class: 'concept-grid' });
+    
+    const block1 = el('div', { class: 'concept' });
+    block1.append(el('div', { class: 'concept-heading' }, '背景脈絡'));
+    block1.append(el('div', { class: 'concept-body' }, sc.background));
+    bento.append(block1);
+
+    const block2 = el('div', { class: 'concept' });
+    block2.append(el('div', { class: 'concept-heading' }, '核心待解決問題'));
+    block2.append(el('div', { class: 'concept-body' }, sc.coreProblem));
+    bento.append(block2);
+
+    root.append(bento);
+    return root;
+  }
+
+  /* ============================================================
+   * Render Task Item
+   * ============================================================ */
+  function renderTask(t, unitId) {
+    const checked = !!state.tasks[t.id];
+    const li = el('li', {
+      class: 'task-item' + (checked ? ' done' : ''),
+      onclick: () => toggleTask(t.id, li, unitId)
+    });
+    li.append(el('div', { class: 'task-checkbox' }, '✓'));
+    li.append(el('div', { class: 'task-label' }, t.text));
+    return li;
+  }
+
+  function toggleTask(id, li, unitId) {
+    if (state.tasks[id]) {
+      delete state.tasks[id];
+      li.classList.remove('done');
+    } else {
+      state.tasks[id] = true;
+      li.classList.add('done');
+    }
+    store.save(state);
+    updateProgressUI();
+    updateUnitProgressPill(unitId);
+  }
+
+  function updateUnitProgressPill(unitId) {
+    const u = window.COURSE.day1.units.find(x => x.id === unitId);
+    if (!u) return;
+    const total = u.tasks.length;
+    const completed = u.tasks.filter(t => state.tasks[t.id]).length;
+    const pill = document.querySelector(`#pill-${unitId}`);
+    if (pill) {
+      pill.textContent = `${completed} / ${total}`;
+    }
+  }
+
+  /* ============================================================
+   * Copyable Prompts Card
+   * ============================================================ */
+  function renderPromptCard(p) {
+    const card = el('div', { class: 'prompt-card' });
+    const head = el('div', { class: 'prompt-card-head' });
+    head.append(el('div', { class: 'prompt-card-title' }, p.title));
+    
+    const copyBtn = el('button', { class: 'prompt-copy-btn', type: 'button' }, '複製提示詞');
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(p.body);
+        copyBtn.textContent = '已複製✓';
+        copyBtn.classList.add('ok');
+        setTimeout(() => {
+          copyBtn.textContent = '複製提示詞';
+          copyBtn.classList.remove('ok');
+        }, 1500);
+      } catch (err) {
+        alert('複製失敗，請手動複製！');
+      }
+    });
+    head.append(copyBtn);
+    card.append(head);
+    card.append(el('pre', { class: 'prompt-text' }, p.body));
+    return card;
+  }
+
+  /* ============================================================
+   * Modal Material Preview
+   * ============================================================ */
+  function openMaterialModal(fileName) {
+    const modal = document.getElementById('materialModal');
+    const title = document.getElementById('modalTitle');
+    const body = document.getElementById('modalBody');
+    
+    title.textContent = `素材檔案預覽: ${fileName}`;
+    body.textContent = '載入中...';
+    modal.classList.add('open');
+
+    // Fetch local material file
+    const url = `course-package/materials/${fileName}`;
+    fetch(url)
+      .then(response => {
+        if (!response.ok) throw new Error('檔案讀取失敗');
+        return response.text();
+      })
+      .then(text => {
+        body.textContent = text;
+      })
+      .catch(err => {
+        body.textContent = `無法預覽該檔案，這可能是因為您直接開啟了 index.html 檔案而不是使用伺服器運行。\n\n請在專案目錄下執行 'npx serve .' 並訪問 http://localhost:3000 運行。\n\n檔案路徑為：course-package/materials/${fileName}`;
+      });
+  }
+
+  function renderMaterialRow(m) {
+    const row = el('div', { class: 'material-row' });
+    row.append(el('span', { class: 'material-tag' }, m.type));
+    
+    const center = el('div', {});
+    const link = el('a', { href: 'javascript:;', onclick: () => openMaterialModal(m.name) }, m.name);
+    center.append(el('div', { class: 'material-name' }, link));
+    center.append(el('div', { class: 'material-desc' }, m.desc));
+    row.append(center);
+    
+    row.append(el('span', { class: 'material-meta' }, 'materials/'));
+    return row;
+  }
+
+  /* ============================================================
+   * Color Swatches Render
+   * ============================================================ */
+  function renderColorSwatches(unitId) {
+    const container = el('div', { style: 'display:flex; gap:12px; margin: 16px 0;' });
+    
+    // We add beautiful custom swatches for color trend units
+    if (unitId === 'd1-u4') {
+      // 2026 Colors
+      const colors = [
+        { hex: '#004F54', name: '變革藍綠色', text: '#ffffff' },
+        { hex: '#F4F1EA', name: '雲舞白', text: '#141e1e' },
+        { hex: '#EE9B00', name: '金合歡黃', text: '#141e1e' },
+        { hex: '#E5989B', name: '粉黛色', text: '#141e1e' },
+        { hex: '#CA6702', name: '茶玫瑰', text: '#ffffff' }
+      ];
+      colors.forEach(c => {
+        const item = el('div', { 
+          class: 'illustration-box', 
+          style: `background: ${c.hex}; color: ${c.text}; flex:1; height: 60px; font-size:11px; display:flex; flex-direction:column; justify-content:center; align-items:center;`
+        });
+        item.append(el('div', { style: 'font-weight:bold;' }, c.name));
+        item.append(el('div', { style: 'opacity:0.8; font-family:monospace;' }, c.hex));
+        container.append(item);
+      });
+    } else if (unitId === 'd1-u5') {
+      // Design Tokens swatches
+      const colors = [
+        { hex: '#004F54', name: 'Primary', text: '#ffffff' },
+        { hex: '#F4F1EA', name: 'Secondary', text: '#141e1e' },
+        { hex: '#EE9B00', name: 'Accent', text: '#141e1e' },
+        { hex: '#141E1E', name: 'Text Dark', text: '#ffffff' }
+      ];
+      colors.forEach(c => {
+        const item = el('div', { 
+          class: 'illustration-box', 
+          style: `background: ${c.hex}; color: ${c.text}; flex:1; height: 60px; font-size:11px; display:flex; flex-direction:column; justify-content:center; align-items:center;`
+        });
+        item.append(el('div', { style: 'font-weight:bold;' }, c.name));
+        item.append(el('div', { style: 'opacity:0.8; font-family:monospace;' }, c.hex));
+        container.append(item);
+      });
+    } else {
+      // Placeholder for other units
+      const item = el('div', { 
+        class: 'illustration-box', 
+        style: 'background: var(--surface-2); color: var(--muted); flex:1; height: 50px; font-size:12px; display:grid; place-items:center;'
+      }, '圖片預留位置 (SVG/PNG)');
+      container.append(item);
+    }
+    return container;
+  }
+
+  /* ============================================================
+   * Render Unit detail
+   * ============================================================ */
+  function renderUnit(day, u) {
+    const details = el('details', { class: 'unit', id: `${day.id}-${u.id}` });
+    
+    const summary = el('summary', {});
+    const titleWrap = el('div', { class: 'unit-title-wrap' });
+    titleWrap.append(el('div', { class: 'unit-title' }, u.title));
+    titleWrap.append(el('div', { class: 'unit-meta' }, `${u.id}  |  時段：${u.timeRange}`));
+    summary.append(titleWrap);
+    
+    // Progress pill
+    const completed = u.tasks.filter(t => state.tasks[t.id]).length;
+    summary.append(el('span', { class: 'unit-progress-pill', id: `pill-${u.id}` }, `${completed} / ${u.tasks.length}`));
+    details.append(summary);
+
+    const body = el('div', { class: 'unit-body' });
+    
+    // Goals
+    body.append(el('h4', {}, '單元學習目標'));
+    const goalsList = el('ul', { class: 'goals-list' });
+    u.goals.forEach(g => goalsList.append(el('li', {}, g)));
+    body.append(goalsList);
+
+    // Color Swatches / Visual Spec
+    body.append(el('h4', {}, '視覺與設計樣式 (Color Swatch)'));
+    body.append(renderColorSwatches(u.id));
+
+    // Formatted Lecture content from content.md matching this unit
+    body.append(el('h4', {}, '講義與實作引導'));
+    const lectureContainer = el('div', { class: 'concept-body', style: 'margin-bottom: 20px;' });
+    
+    // Fetch and show excerpt from day1/content.md dynamically or use structured descriptions
+    // To make sure this works without network latency, we will inline the core descriptions
+    // as concepts below or fetch day1/content.md and find ## u-n section.
+    // Let's create an elegant fallback: we fetch day1/content.md.
+    const lectureContentBox = el('div', { id: `lecture-${u.id}`, style: 'font-size:14.5px; border-left:2px solid var(--accent); padding-left:14px;' }, '講義內容加載中...');
+    lectureContainer.append(lectureContentBox);
+    body.append(lectureContainer);
+
+    // Prompts
+    if (u.prompts && u.prompts.length) {
+      body.append(el('h4', {}, '複製提示詞 (RTFC Prompts)'));
+      u.prompts.forEach(p => body.append(renderPromptCard(p)));
+    }
+
+    // Tasks list
+    if (u.tasks && u.tasks.length) {
+      body.append(el('h4', {}, '單元實作檢核清單'));
+      const tList = el('ul', { class: 'task-list' });
+      u.tasks.forEach(t => tList.append(renderTask(t, u.id)));
+      body.append(tList);
+    }
+
+    // Materials
+    if (u.materials && u.materials.length) {
+      body.append(el('h4', {}, '單元教材與範本檔'));
+      const mList = el('div', { class: 'materials' });
+      u.materials.forEach(m => mList.append(renderMaterialRow(m)));
+      body.append(mList);
+    }
+
+    details.append(body);
+    return details;
+  }
+
+  /* ============================================================
+   * Fetch Lecture content
+   * ============================================================ */
+  function fetchAndPopulateLectures() {
+    fetch('course-package/day1/content.md')
+      .then(r => {
+        if (!r.ok) throw new Error('Failed to load content');
+        return r.text();
+      })
+      .then(text => {
+        // We parse ## u-1 to ## u-9
+        const units = window.COURSE.day1.units;
+        units.forEach((u, index) => {
+          const nextUId = index < units.length - 1 ? `## u-${index + 2}` : '###';
+          const uPattern = `## u-${index + 1}`;
+          
+          let startIndex = text.indexOf(uPattern);
+          if (startIndex !== -1) {
+            let endIndex = text.indexOf(nextUId, startIndex + uPattern.length);
+            if (endIndex === -1) endIndex = text.length;
+            
+            let block = text.substring(startIndex, endIndex);
+            // strip header
+            block = block.replace(/## u-\d+:.*?\n/, '').replace(/\*\*對應任務\*\*.*?\n/, '').replace(/\*\*對應素材\*\*.*?\n/, '').replace(/\*\*圖片需求.*?\n/, '').replace(/- `day1-u.*?\n/g, '');
+            
+            // Render markdown basic tags
+            const box = document.getElementById(`lecture-${u.id}`);
+            if (box) {
+              clear(box);
+              box.append(inlineMarkdown(block.trim()));
+            }
+          }
+        });
+      })
+      .catch(err => {
+        // Fallback description if fetch fails
+        window.COURSE.day1.units.forEach(u => {
+          const box = document.getElementById(`lecture-${u.id}`);
+          if (box) {
+            box.innerHTML = `<p>已成功生成簡報與教學配置！請直接在本地伺服器或開啟 <code>course-package/day1/content.md</code> 閱讀詳細單元內容。</p>`;
+          }
+        });
+      });
+  }
+
+  /* ============================================================
+   * Render Day Chapter
+   * ============================================================ */
+  function renderDay(dayId) {
+    const d = window.COURSE[dayId];
+    if (!d) return null;
+    const root = el('section', { class: 'chapter', id: dayId });
+    
+    // Day hero
+    const hero = el('div', { class: 'day-hero' });
+    hero.append(el('div', { class: 'day-hero-numeral' }, 'D1'));
+    const meta = el('div', { class: 'day-hero-meta' });
+    meta.append(el('div', { class: 'day-hero-title' }, d.hero.title));
+    meta.append(el('div', { class: 'day-hero-lead' }, d.hero.lead));
+    hero.append(meta);
+    root.append(hero);
+
+    // Units
+    d.units.forEach(u => root.append(renderUnit(d, u)));
+    return root;
+  }
+
+  /* ============================================================
+   * Render Materials overview
+   * ============================================================ */
+  function renderMaterials() {
+    const root = el('section', { class: 'chapter', id: 'materials' });
+    
+    const header = el('header', {});
+    header.append(el('span', { class: 'chapter-num' }, 'DOWNLOADS'));
+    header.append(el('h2', {}, '教材與範本檔案總覽'));
+    root.append(header);
+
+    const mList = el('div', { class: 'materials' });
+    window.COURSE.materials.forEach(m => mList.append(renderMaterialRow(m)));
+    root.append(mList);
+
+    return root;
+  }
+
+  /* ============================================================
+   * Render Quiz
+   * ============================================================ */
+  let userQuizAnswers = {};
+  function renderQuiz() {
+    const root = el('section', { class: 'chapter', id: 'quiz' });
+    
+    const header = el('header', {});
+    header.append(el('span', { class: 'chapter-num' }, 'ASSESSMENT'));
+    header.append(el('h2', {}, '結訓與備課自我檢測'));
+    root.append(header);
+
+    const quizBox = el('div', { class: 'quiz-container', id: 'quizContainer' });
+    root.append(quizBox);
+    
+    return root;
+  }
+
+  function renderQuizQuestion(index) {
+    const container = document.getElementById('quizContainer');
+    if (!container) return;
+    clear(container);
+
+    const quiz = window.COURSE.quiz;
+    const q = quiz[index];
+    if (!q) return;
+
+    const qBox = el('div', { class: 'quiz-question' });
+    qBox.append(el('div', { class: 'quiz-q-text' }, `問題 ${index + 1} / ${quiz.length}：${q.question}`));
+    
+    const options = el('div', { class: 'quiz-options' });
+    q.options.forEach((opt, oIdx) => {
+      const optEl = el('div', { 
+        class: 'quiz-option' + (userQuizAnswers[index] === oIdx ? ' selected' : ''),
+        onclick: () => {
+          if (state.quiz[index] != null) return; // Answered already
+          document.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected'));
+          optEl.classList.add('selected');
+          userQuizAnswers[index] = oIdx;
+          document.getElementById('submitAnswerBtn').removeAttribute('disabled');
+        }
+      }, opt);
+      options.append(optEl);
+    });
+    qBox.append(options);
+    container.append(qBox);
+
+    // Feedback and Submit button
+    const feedbackBox = el('div', { id: 'quizFeedback' });
+    container.append(feedbackBox);
+
+    const nav = el('div', { class: 'quiz-nav' });
+    
+    const prevBtn = el('button', { 
+      class: 'quiz-btn', 
+      style: 'background: var(--surface-2); color: var(--fg); border: 1px solid var(--border);',
+      onclick: () => renderQuizQuestion(index - 1),
+      disabled: index === 0
+    }, '上一題');
+    nav.append(prevBtn);
+
+    const actBtn = el('button', { 
+      class: 'quiz-btn', 
+      id: 'submitAnswerBtn',
+      disabled: userQuizAnswers[index] == null,
+      onclick: () => submitQuizAnswer(index)
+    }, '提交答案');
+    
+    // If already answered, show results
+    if (state.quiz[index] != null) {
+      showQuizAnswerResult(index, feedbackBox, actBtn);
+    }
+    
+    nav.append(actBtn);
+    container.append(nav);
+  }
+
+  function submitQuizAnswer(index) {
+    const q = window.COURSE.quiz[index];
+    const userAns = userQuizAnswers[index];
+    state.quiz[index] = userAns;
+    store.save(state);
+    
+    const feedbackBox = document.getElementById('quizFeedback');
+    const actBtn = document.getElementById('submitAnswerBtn');
+    
+    showQuizAnswerResult(index, feedbackBox, actBtn);
+  }
+
+  function showQuizAnswerResult(index, feedbackBox, actBtn) {
+    const q = window.COURSE.quiz[index];
+    const userAns = state.quiz[index];
+    const isCorrect = userAns === q.answer;
+    
+    clear(feedbackBox);
+    
+    // Highlight options
+    document.querySelectorAll('.quiz-option').forEach((optEl, oIdx) => {
+      if (oIdx === q.answer) {
+        optEl.className = 'quiz-option correct';
+      } else if (oIdx === userAns) {
+        optEl.className = 'quiz-option incorrect';
+      } else {
+        optEl.className = 'quiz-option';
+      }
+    });
+
+    if (isCorrect) {
+      feedbackBox.append(el('div', { class: 'quiz-feedback correct' }, '✓ 回答正確！太棒了！'));
+    } else {
+      const uId = q.sourceUnit.split('.')[1];
+      const reviewLink = el('a', { href: 'javascript:;', onclick: () => scrollToSection(`day1-${uId}`) }, '複習此單元');
+      const wrap = el('div', { class: 'quiz-feedback incorrect' });
+      wrap.append(`✗ 回答錯誤。正確答案是：「${q.options[q.answer]}」。建議 `, reviewLink);
+      feedbackBox.append(wrap);
+    }
+
+    // Change action button to "下一題" or "查看結算"
+    const isLast = index === window.COURSE.quiz.length - 1;
+    actBtn.textContent = isLast ? '查看結算' : '下一題';
+    actBtn.onclick = () => {
+      if (isLast) {
+        showQuizScoreBoard();
+      } else {
+        renderQuizQuestion(index + 1);
+      }
+    };
+  }
+
+  function showQuizScoreBoard() {
+    const container = document.getElementById('quizContainer');
+    if (!container) return;
+    clear(container);
+
+    const quiz = window.COURSE.quiz;
+    let correctCount = 0;
+    quiz.forEach((q, index) => {
+      if (state.quiz[index] === q.answer) correctCount++;
+    });
+
+    const board = el('div', { class: 'quiz-score-board' });
+    board.append(el('div', { style: 'font-size:18px; font-weight:bold; margin-bottom:12px;' }, '測驗完成！您的得分：'));
+    board.append(el('div', { class: 'quiz-score-num' }, `${Math.round((correctCount / quiz.length) * 100)}`));
+    board.append(el('div', { style: 'color:var(--muted); margin-top:8px;' }, `答對題數：${correctCount} / ${quiz.length}`));
+    
+    const resetQuizBtn = el('button', { 
+      class: 'quiz-btn', 
+      style: 'margin-top: 24px;',
+      onclick: () => {
+        state.quiz = {};
+        userQuizAnswers = {};
+        store.save(state);
+        renderQuizQuestion(0);
+      }
+    }, '重新測驗');
+    board.append(resetQuizBtn);
+
+    container.append(board);
+  }
+
+  /* ============================================================
+   * Navigation and Progress UI
+   * ============================================================ */
+  function renderSidebar() {
+    const nav = document.getElementById('nav');
+    clear(nav);
+
+    // Overview
+    const ovLink = el('div', { class: 'nav-link active', 'data-target': 'overview', onclick: () => scrollToSection('overview') });
+    ovLink.append(el('span', { class: 'nav-num' }, '00'), '工作坊總覽');
+    nav.append(ovLink);
+
+    // Shared Case
+    const scLink = el('div', { class: 'nav-link', 'data-target': 'shared-case', onclick: () => scrollToSection('shared-case') });
+    scLink.append(el('span', { class: 'nav-num' }, '★'), '共用實戰案例');
+    nav.append(scLink);
+
+    // Day units
+    nav.append(el('div', { class: 'nav-section-title' }, '課程單元目錄'));
+    window.COURSE.day1.units.forEach((u, i) => {
+      const link = el('div', { class: 'nav-link', 'data-target': `day1-${u.id}`, onclick: () => {
+        scrollToSection(`day1-${u.id}`);
+        // open accordion
+        const det = document.getElementById(`day1-${u.id}`);
+        if (det) det.open = true;
+      }});
+      link.append(el('span', { class: 'nav-num' }, `0${i+1}`), u.title);
+      nav.append(link);
+    });
+
+    // Materials & Quiz
+    nav.append(el('div', { class: 'nav-section-title' }, '輔助工具與評量'));
+    
+    const matLink = el('div', { class: 'nav-link', 'data-target': 'materials', onclick: () => scrollToSection('materials') });
+    matLink.append(el('span', { class: 'nav-num' }, '⬇'), '教材素材總覽');
+    nav.append(matLink);
+
+    const quizLink = el('div', { class: 'nav-link', 'data-target': 'quiz', onclick: () => scrollToSection('quiz') });
+    quizLink.append(el('span', { class: 'nav-num' }, '✍'), '課後自我檢測');
+    nav.append(quizLink);
+  }
+
+  function updateProgressUI() {
+    const tasks = window.COURSE.day1.units.flatMap(u => u.tasks);
+    const total = tasks.length;
+    const completed = tasks.filter(t => state.tasks[t.id]).length;
+    const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+    
+    const fill = document.getElementById('progressFill');
+    const val = document.getElementById('progressVal');
+    if (fill) fill.style.width = `${pct}%`;
+    if (val) val.textContent = `${pct}%`;
+  }
+
+  function initTheme() {
+    const saved = localStorage.getItem('dify_workshop_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const curr = document.documentElement.getAttribute('data-theme');
+      const next = curr === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('dify_workshop_theme', next);
+    });
+  }
+
+  /* ============================================================
+   * Initialize Application
+   * ============================================================ */
+  function init() {
+    const content = document.getElementById('content');
+    clear(content);
+
+    // Meta details in brand
+    document.getElementById('brandProgram').textContent = window.COURSE.meta.metaInfo || '設計與時尚學院';
+    document.getElementById('brandTitle').textContent = window.COURSE.meta.title;
+
+    // Render chapters
+    content.append(renderOverview(window.COURSE.meta));
+    content.append(renderSharedCase(window.COURSE.sharedCase));
+    content.append(renderDay('day1'));
+    content.append(renderMaterials());
+    content.append(renderQuiz());
+
+    // Sidebar & Interactivity
+    renderSidebar();
+    updateProgressUI();
+    initTheme();
+    
+    // Fetch content.md
+    fetchAndPopulateLectures();
+
+    // 初始化第一個測驗問題（在 DOM 已掛載之後）
+    renderQuizQuestion(0);
+
+    // Reset button
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (confirm('確定要清除所有實作進度與測驗記錄嗎？')) {
+        store.reset();
+        state = store.load();
+        userQuizAnswers = {};
+        
+        // Re-render tasks
+        document.querySelectorAll('.task-item').forEach(item => {
+          item.classList.remove('done');
+        });
+        
+        window.COURSE.day1.units.forEach(u => {
+          updateUnitProgressPill(u.id);
+        });
+        
+        updateProgressUI();
+        renderQuizQuestion(0);
+        scrollToSection('overview');
+      }
+    });
+
+    // Close Modal event
+    document.getElementById('modalClose').addEventListener('click', () => {
+      document.getElementById('materialModal').classList.remove('open');
+    });
+    document.getElementById('materialModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('materialModal')) {
+        document.getElementById('materialModal').classList.remove('open');
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
