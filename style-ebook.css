@@ -1,0 +1,260 @@
+/* ============================================================
+ * style-ebook.css — 課程電子書（PDF）列印樣式
+ * 對齊 2026 色彩趨勢：變革藍綠 #004f54 + 金合歡黃 #ee9b00 + 雲舞暖白 #f4f1ea
+ * ============================================================ */
+
+/* === 頁面設定 === */
+@page {
+  margin: 20mm;
+}
+@page :first {
+  margin: 0;          /* 封面滿版、無頁碼 */
+}
+
+:root {
+  --teal:      #004f54;
+  --teal-deep: #00363a;
+  --gold:      #ee9b00;
+  --cream:     #f4f1ea;
+  --ink:       #1a1f1f;
+  --muted:     #5b6a6a;
+  --border:    #d8d3c7;
+}
+
+* { box-sizing: border-box; }
+
+/* 隱藏 pandoc standalone 自動插入的標題區塊（封面另由 include-before-body 提供） */
+header#title-block-header { display: none; }
+
+body {
+  font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+  color: var(--ink);
+  line-height: 1.75;
+  font-size: 11.5pt;
+  margin: 0;
+}
+
+/* === 封面 === */
+.cover {
+  height: 100vh;
+  background: linear-gradient(150deg, var(--teal) 0%, var(--teal-deep) 100%);
+  color: #fff;
+  padding: 40mm 28mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  page-break-after: always;
+}
+.cover h1 {
+  font-family: "Georgia", serif;
+  font-size: 34pt;
+  line-height: 1.25;
+  margin: 0 0 8pt;
+  border: 0;
+  color: #fff;
+}
+.cover h2 {
+  font-size: 16pt;
+  font-weight: 400;
+  color: var(--gold);
+  margin: 0 0 28pt;
+  border: 0;
+  letter-spacing: 0.05em;
+}
+.cover h3 {
+  font-size: 13pt;
+  color: var(--cream);
+  border: 0;
+  margin: 24pt 0 8pt;
+}
+.cover-meta {
+  background: rgba(255, 255, 255, 0.10);
+  border-left: 3px solid var(--gold);
+  border-radius: 4pt;
+  padding: 16pt 20pt;
+  font-size: 11pt;
+  line-height: 2;
+}
+.cover-meta strong { color: var(--gold); font-weight: 700; margin-right: 6pt; }
+.cover ul { list-style: none; padding: 0; }
+.cover li { padding: 3pt 0; color: var(--cream); }
+
+/* === 章節標題 === */
+h1.chapter {
+  page-break-before: always;
+  font-family: "Georgia", serif;
+  font-size: 24pt;
+  color: var(--teal);
+  border-bottom: 3px solid var(--gold);
+  padding-bottom: 8pt;
+  margin: 0 0 20pt;
+}
+h2 {
+  font-family: "Georgia", serif;
+  font-size: 16pt;
+  color: var(--teal-deep);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5pt;
+  margin: 22pt 0 12pt;
+  page-break-after: avoid;
+}
+h3 {
+  font-size: 12.5pt;
+  color: var(--teal);
+  margin: 16pt 0 8pt;
+  page-break-after: avoid;
+}
+.time-range {
+  font-family: "Consolas", monospace;
+  font-size: 9.5pt;
+  font-weight: 400;
+  color: var(--muted);
+  background: var(--cream);
+  padding: 1pt 8pt;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+/* === 段落 / 清單 === */
+p { margin: 8pt 0; }
+ul, ol { margin: 8pt 0; padding-left: 22pt; }
+li { margin: 4pt 0; }
+
+/* 導言 blockquote */
+blockquote {
+  border-left: 4px solid var(--teal);
+  background: var(--cream);
+  margin: 12pt 0;
+  padding: 10pt 16pt;
+  color: var(--teal-deep);
+  font-size: 12pt;
+  border-radius: 0 4pt 4pt 0;
+}
+
+/* === 學習目標：綠色 ✓ 徽章 === */
+.goal-list ul { list-style: none; padding-left: 0; }
+.goal-list li {
+  position: relative;
+  padding-left: 24pt;
+  margin: 6pt 0;
+}
+.goal-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #2e7d32;
+  font-weight: bold;
+  font-size: 12pt;
+}
+
+/* === 實作任務：印刷用勾選方框（gfm task list） === */
+/* pandoc 產出 <ul class="task-list"><li><input type=checkbox disabled>…；隱藏原生框、改用 ☐ */
+ul.task-list, .task-list { list-style: none; padding-left: 0; }
+.task-list li {
+  position: relative;
+  padding-left: 24pt;
+  margin: 6pt 0;
+}
+.task-list li input[type="checkbox"] { display: none; }   /* 隱藏互動 checkbox */
+.task-list li::before {
+  content: '☐';
+  position: absolute;
+  left: 0;
+  font-size: 13pt;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* === 操作提示詞：橘色 PROMPT 徽章 + 暗底 === */
+.prompt-block {
+  background: #16201f;
+  color: #e8e4d8;
+  border-left: 4px solid var(--gold);
+  border-radius: 4pt;
+  padding: 14pt 16pt 12pt;
+  margin: 10pt 0;
+  page-break-inside: avoid;
+  font-size: 10.5pt;
+}
+.prompt-block::before {
+  content: 'PROMPT';
+  display: inline-block;
+  background: var(--gold);
+  color: #16201f;
+  padding: 2pt 10pt;
+  border-radius: 3pt;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-bottom: 8pt;
+}
+.prompt-block strong { color: var(--gold); display: block; margin-bottom: 4pt; }
+.prompt-block p { margin: 4pt 0; }
+
+/* === 圖片 === */
+img { max-width: 100%; height: auto; border-radius: 6pt; }
+img.hero-img {
+  width: 100%;
+  border: 1px solid var(--border);
+  margin: 4pt 0 12pt;
+}
+img.unit-img {
+  display: block;
+  margin: 10pt auto;
+  border: 1px solid var(--border);
+  max-width: 90%;
+}
+
+/* === 表格（教材附錄內） === */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12pt 0;
+  font-size: 10pt;
+  page-break-inside: avoid;
+}
+th, td { border: 1px solid var(--border); padding: 6pt 10pt; text-align: left; }
+th { background: var(--cream); color: var(--teal-deep); font-weight: 700; }
+
+/* === 程式碼 / 行內 code === */
+code {
+  font-family: "Consolas", monospace;
+  background: var(--cream);
+  padding: 1pt 5pt;
+  border-radius: 3pt;
+  font-size: 0.9em;
+}
+pre {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 4pt;
+  padding: 12pt;
+  overflow-x: auto;
+  page-break-inside: avoid;
+}
+pre code { background: none; padding: 0; }
+
+/* === 分隔線 === */
+hr { border: 0; border-top: 1px solid var(--border); margin: 18pt 0; }
+
+/* === pandoc 目錄（TOC） === */
+#TOC, nav#TOC {
+  page-break-after: always;
+}
+#TOC::before, nav#TOC::before {
+  content: '目錄';
+  display: block;
+  font-family: "Georgia", serif;
+  font-size: 22pt;
+  color: var(--teal);
+  border-bottom: 3px solid var(--gold);
+  padding-bottom: 8pt;
+  margin-bottom: 16pt;
+}
+#TOC ul { list-style: none; padding-left: 16pt; }
+#TOC > ul { padding-left: 0; }
+#TOC a { text-decoration: none; color: var(--ink); }
+#TOC li { margin: 5pt 0; }
+
+/* 連結 */
+a { color: var(--teal); }

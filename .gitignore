@@ -1,6 +1,10 @@
 # 驗證用暫存輸出（Playwright 截圖、serve 日誌等），非網站素材
 output/
 
+# 電子書中繼檔（保留 dist/*.pdf、dist/*.docx 交付物，忽略組稿中繼與暫存 HTML）
+dist/master.md
+dist/*.html
+
 # 系統與編輯器暫存檔
 .DS_Store
 Thumbs.db

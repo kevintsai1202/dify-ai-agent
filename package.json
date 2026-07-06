@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "Dify AI Agent 與 Claude 雲端備課實戰工作坊教學網站",
   "scripts": {
-    "serve": "npx serve ."
+    "serve": "npx serve .",
+    "build:ebook": "node scripts/build-ebook.mjs",
+    "build:ebook:pdf": "node scripts/build-ebook.mjs --no-docx",
+    "verify:ebook": "node scripts/verify-ebook.mjs"
   },
   "dependencies": {},
   "devDependencies": {
