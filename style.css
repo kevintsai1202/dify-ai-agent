@@ -913,25 +913,66 @@ section.chapter > header {
   flex-direction: column;
   box-shadow: var(--shadow-lift);
 }
+/* iframe 檢視版：更大視窗，適合閱讀 md/html/pdf */
+.modal-content-viewer {
+  max-width: 960px;
+  height: 88vh;
+  max-height: 88vh;
+  overflow: hidden;
+}
 .modal-header {
-  padding: 20px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 .modal-title {
   font-family: var(--font-serif);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.modal-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--fg);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.modal-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
 }
 .modal-close {
   font-size: 24px;
+  line-height: 1;
   color: var(--muted);
   cursor: pointer;
 }
 .modal-close:hover {
   color: var(--fg);
+}
+/* iframe：填滿內容區，白底避免 PDF/HTML 透出遮罩色 */
+.modal-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: var(--surface);
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
 }
 .modal-body {
   padding: 24px;
@@ -951,6 +992,12 @@ section.chapter > header {
     border-bottom: 1px solid var(--border);
   }
   .main { margin-left: 0; }
+  /* 手機版素材檢視：幾乎全螢幕，工具列文字可縮 */
+  .modal-overlay { padding: 8px; }
+  .modal-content-viewer { height: 94vh; max-height: 94vh; }
+  .modal-header { padding: 12px 14px; }
+  .modal-title { font-size: 15px; }
+  .modal-btn { padding: 5px 10px; font-size: 12px; }
   .day-hero { grid-template-columns: 1fr; gap: 16px; padding: 24px; }
   .day-hero-numeral { font-size: 80px; }
   .topbar { padding: 0 20px; }

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>素材檢視 — Dify AI Agent 工作坊</title>
+<!-- marked.js：客戶端 Markdown 渲染（CDN 鎖版本，避免行為飄移） -->
+<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+<!-- DOMPurify：把 marked 輸出注入 DOM 前先過濾，降低 XSS 風險 -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+<style>
+  /* === 設計 Token：與主站 style.css 對齊（2026 色彩趨勢） === */
+  :root {
+    --bg:            oklch(97% 0.005 85);
+    --surface:       oklch(100% 0 0);
+    --surface-2:     oklch(95% 0.008 85);
+    --fg:            oklch(15% 0.01 200);
+    --muted:         oklch(50% 0.015 200);
+    --border:        oklch(90% 0.01 85);
+    --border-strong: oklch(80% 0.015 85);
+    --accent:        oklch(40% 0.12 200);   /* 變革藍綠 #004f54 */
+    --accent-soft:   oklch(94% 0.03 200);
+    --accent-deep:   oklch(30% 0.10 200);
+    --accent-2:      oklch(75% 0.16 80);    /* 金合歡黃 */
+    --success:       oklch(62% 0.15 145);
+    --r-sm: 6px; --r-md: 10px;
+    --font-body:  "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+    --font-serif: "Georgia", serif;
+    --font-mono:  "Consolas", "Courier New", monospace;
+  }
+  [data-theme="dark"] {
+    --bg:            oklch(15% 0.015 200);
+    --surface:       oklch(18% 0.015 200);
+    --surface-2:     oklch(22% 0.015 200);
+    --fg:            oklch(96% 0.005 200);
+    --muted:         oklch(68% 0.012 200);
+    --border:        oklch(26% 0.015 200);
+    --border-strong: oklch(34% 0.015 200);
+    --accent:        oklch(70% 0.12 200);
+    --accent-soft:   oklch(25% 0.06 200);
+    --accent-deep:   oklch(85% 0.09 200);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font-body); line-height: 1.75; font-size: 15.5px;
+  }
+  /* === 頂部工具列 === */
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .topbar h1 {
+    flex: 1; margin: 0;
+    font-family: var(--font-serif);
+    font-size: 16px; font-weight: 700; color: var(--fg);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .topbar .actions { display: flex; gap: 8px; }
+  .topbar button, .topbar a.dl {
+    padding: 7px 14px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--fg);
+    border-radius: 999px;
+    font-size: 13px; cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: all 0.15s ease;
+  }
+  .topbar button:hover, .topbar a.dl:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+  }
+  .topbar button.copied {
+    background: var(--success); color: #fff; border-color: var(--success);
+  }
+  /* === 主內容 === */
+  main { max-width: 860px; margin: 0 auto; padding: 32px 28px 80px; }
+  .file-meta {
+    display: flex; gap: 12px; align-items: center;
+    margin-bottom: 24px; color: var(--muted); font-size: 13px;
+  }
+  .file-meta .pill {
+    padding: 3px 10px; border-radius: 999px;
+    background: var(--surface-2); font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: 0.05em;
+  }
+  /* === Markdown 樣式 === */
+  .md-content h1 { font-family: var(--font-serif); font-size: 27px; margin: 30px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border-strong); }
+  .md-content h2 { font-family: var(--font-serif); font-size: 21px; margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .md-content h3 { font-size: 17px; margin: 20px 0 10px; color: var(--accent-deep); }
+  .md-content h4 { font-size: 15.5px; margin: 16px 0 8px; }
+  .md-content p { margin: 10px 0; }
+  .md-content ul, .md-content ol { padding-left: 26px; margin: 10px 0; }
+  .md-content li { margin: 5px 0; }
+  .md-content code {
+    background: var(--surface-2); padding: 2px 6px; border-radius: 4px;
+    font-family: var(--font-mono); font-size: 0.88em;
+  }
+  .md-content pre {
+    background: var(--surface-2); padding: 14px 16px;
+    border-radius: var(--r-sm); border: 1px solid var(--border);
+    overflow-x: auto; line-height: 1.5;
+  }
+  .md-content pre code { background: transparent; padding: 0; font-size: 13px; }
+  .md-content blockquote {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    margin: 14px 0; padding: 10px 16px;
+    border-radius: 0 var(--r-sm) var(--r-sm) 0; color: var(--fg);
+  }
+  .md-content blockquote p { margin: 4px 0; }
+  .md-content a { color: var(--accent-deep); }
+  .md-content table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  .md-content th, .md-content td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
+  .md-content th { background: var(--surface-2); font-weight: 600; }
+  .md-content hr { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+  .md-content img { max-width: 100%; height: auto; border-radius: var(--r-sm); }
+  .md-content strong { color: var(--fg); }
+  /* === CSV 表格 === */
+  .csv-table {
+    width: 100%; border-collapse: collapse; font-size: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-sm); overflow: hidden;
+  }
+  .csv-table th, .csv-table td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+  .csv-table thead th { background: var(--surface-2); font-weight: 600; position: sticky; top: 0; }
+  .csv-table tbody tr:nth-child(even) { background: var(--surface-2); }
+  /* === YAML / TXT / JSON 純文字 === */
+  .raw-content {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 18px 20px;
+    font-family: var(--font-mono); font-size: 13.5px; line-height: 1.6;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+  }
+  /* === 狀態訊息 === */
+  .state-msg { padding: 60px 20px; text-align: center; color: var(--muted); }
+  .state-msg.error { color: oklch(60% 0.18 25); }
+</style>
+</head>
+<body>
+  <!-- 從 localStorage 讀取主題（與主站共用 dify_workshop_theme） -->
+  <script>
+    (function () {
+      try {
+        const t = localStorage.getItem('dify_workshop_theme');
+        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (_) { /* ignore */ }
+    })();
+  </script>
+
+  <header class="topbar">
+    <h1 id="filename">載入中…</h1>
+    <div class="actions">
+      <button id="copy-btn" type="button" title="複製全部內容">📋 複製</button>
+      <a id="download-btn" class="dl" download title="下載原始檔">⬇ 下載原檔</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="file-meta" id="file-meta" hidden>
+      <span class="pill" id="file-type">FILE</span>
+      <span id="file-path"></span>
+    </div>
+    <div id="content"></div>
+  </main>
+
+<script>
+  // === 解析 query param ===
+  const params = new URLSearchParams(location.search);
+  const file = params.get('file');
+  const contentEl = document.getElementById('content');
+  const filenameEl = document.getElementById('filename');
+  const filePathEl = document.getElementById('file-path');
+  const fileTypeEl = document.getElementById('file-type');
+  const fileMetaEl = document.getElementById('file-meta');
+  const copyBtn = document.getElementById('copy-btn');
+  const dlBtn = document.getElementById('download-btn');
+
+  /**
+   * 安全地把 HTML 片段插入容器：先經 DOMPurify 過濾，再以 Range 建立 fragment。
+   * @param {HTMLElement} target 目標容器
+   * @param {string} html 待插入的 HTML 字串
+   */
+  function setHtml(target, html) {
+    const safe = (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html) : html;
+    while (target.firstChild) target.removeChild(target.firstChild);
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    target.appendChild(range.createContextualFragment(safe));
+  }
+
+  /** 只放純文字（避免任何 HTML 注入） */
+  function setText(target, text) {
+    while (target.firstChild) target.removeChild(target.firstChild);
+    target.appendChild(document.createTextNode(text));
+  }
+
+  // 初始狀態
+  setText(contentEl, '⌛ 載入中…');
+  contentEl.className = 'state-msg';
+
+  if (!file) {
+    contentEl.classList.add('error');
+    setText(contentEl, '❌ 缺少 file 參數，請從課程頁的素材清單點選。');
+  } else {
+    loadFile(file);
+  }
+
+  /**
+   * 主流程：依副檔名選擇渲染策略
+   * @param {string} path 素材檔相對路徑，例如 course-package/materials/xxx.md
+   */
+  async function loadFile(path) {
+    const ext = (path.split('.').pop() || '').toLowerCase();
+    const filename = decodeURIComponent(path.split('/').pop() || '');
+    document.title = filename + ' — 素材檢視';
+    filenameEl.textContent = filename;
+    filePathEl.textContent = decodeURIComponent(path);
+    fileTypeEl.textContent = ext.toUpperCase() || 'FILE';
+    fileMetaEl.hidden = false;
+    dlBtn.href = path;
+
+    let raw;
+    try {
+      const resp = await fetch(path);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      raw = await resp.text();
+      // 移除可能的 UTF-8 BOM（CSV 為 Excel 相容常加 BOM）
+      if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+    } catch (err) {
+      contentEl.className = 'state-msg error';
+      setText(contentEl, '❌ 無法載入檔案：' + err.message);
+      return;
+    }
+
+    contentEl.className = '';
+    if (ext === 'md' || ext === 'markdown') renderMarkdown(raw);
+    else if (ext === 'csv') renderCsv(raw);
+    else renderRaw(raw); // yaml / yml / txt / json / 其他純文字
+
+    // 複製鈕永遠複製原始文字，避免 HTML 標籤污染剪貼簿
+    copyBtn.addEventListener('click', () => copyText(raw));
+  }
+
+  /** marked.js + DOMPurify 渲染 Markdown */
+  function renderMarkdown(text) {
+    if (typeof marked === 'undefined') {
+      contentEl.className = 'state-msg error';
+      setText(contentEl, 'marked.js 未載入（請確認網路連線）');
+      return;
+    }
+    marked.setOptions({ gfm: true, breaks: false, headerIds: false, mangle: false });
+    const wrapper = document.createElement('article');
+    wrapper.className = 'md-content';
+    setHtml(wrapper, marked.parse(text));
+    while (contentEl.firstChild) contentEl.removeChild(contentEl.firstChild);
+    contentEl.appendChild(wrapper);
+  }
+
+  /** 將 CSV 渲染成 HTML 表格（純 createElement，避免拼字串） */
+  function renderCsv(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.length);
+    if (!lines.length) { contentEl.className = 'state-msg'; setText(contentEl, '（空檔）'); return; }
+    const rows = lines.map(parseCsvLine);
+    const head = rows.shift();
+    const wrap = document.createElement('div');
+    wrap.style.overflow = 'auto';
+    const tbl = document.createElement('table');
+    tbl.className = 'csv-table';
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    head.forEach(c => { const th = document.createElement('th'); th.textContent = c; trh.appendChild(th); });
+    thead.appendChild(trh); tbl.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      r.forEach(c => { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); });
+      tbody.appendChild(tr);
+    });
+    tbl.appendChild(tbody); wrap.appendChild(tbl);
+    while (contentEl.firstChild) contentEl.removeChild(contentEl.firstChild);
+    contentEl.appendChild(wrap);
+  }
+
+  /** YAML / TXT / JSON：放 <pre> 保留排版 */
+  function renderRaw(text) {
+    const pre = document.createElement('pre');
+    pre.className = 'raw-content';
+    pre.textContent = text;
+    while (contentEl.firstChild) contentEl.removeChild(contentEl.firstChild);
+    contentEl.appendChild(pre);
+  }
+
+  /** 簡易 CSV 單行解析：支援 "a,b"、雙引號跳脫 "" */
+  function parseCsvLine(line) {
+    const out = []; let cur = ''; let inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuote) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') { inQuote = false; }
+        else { cur += ch; }
+      } else {
+        if (ch === '"') { inQuote = true; }
+        else if (ch === ',') { out.push(cur); cur = ''; }
+        else { cur += ch; }
+      }
+    }
+    out.push(cur);
+    return out;
+  }
+
+  /** 複製文字到剪貼簿（含 execCommand fallback） */
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); }
+    catch (_) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      ta.remove();
+    }
+    copyBtn.classList.add('copied');
+    copyBtn.textContent = '✓ 已複製';
+    setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.textContent = '📋 複製'; }, 1600);
+  }
+</script>
+</body>
+</html>

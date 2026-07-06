@@ -50,14 +50,18 @@
 
   </div>
 
-  <!-- ===== Materials Detail Modal ===== -->
+  <!-- ===== Materials Detail Modal（頁內 iframe 檢視，支援 md/html/pdf）===== -->
   <div class="modal-overlay" id="materialModal">
-    <div class="modal-content">
+    <div class="modal-content modal-content-viewer">
       <div class="modal-header">
         <div class="modal-title" id="modalTitle">檔案預覽</div>
-        <div class="modal-close" id="modalClose">&times;</div>
+        <div class="modal-actions">
+          <a class="modal-btn" id="modalNewTab" href="#" target="_blank" rel="noopener" title="在新分頁開啟">↗ 開新分頁</a>
+          <div class="modal-close" id="modalClose">&times;</div>
+        </div>
       </div>
-      <div class="modal-body" id="modalBody"></div>
+      <!-- md/csv/yaml 走 viewer.html 美化渲染；pdf/html 直接餵瀏覽器內建檢視器 -->
+      <iframe class="modal-frame" id="modalFrame" title="素材內容預覽" referrerpolicy="no-referrer"></iframe>
     </div>
   </div>
 
@@ -435,30 +439,48 @@
   }
 
   /* ============================================================
-   * Modal Material Preview
+   * Modal Material Preview（頁內 iframe，支援 md/html/pdf）
    * ============================================================ */
+  /**
+   * 依副檔名決定 iframe 要載入的來源
+   * - pdf / html / htm：直接餵檔案路徑，交給瀏覽器內建檢視器渲染
+   * - 其餘（md/csv/yaml/yml/txt/json…）：走 viewer.html?file= 做美化渲染
+   * @param {string} filePath 素材檔相對路徑
+   * @returns {string} iframe 的 src
+   */
+  function resolveViewerSrc(filePath) {
+    const ext = (filePath.split('.').pop() || '').toLowerCase();
+    if (ext === 'pdf' || ext === 'html' || ext === 'htm') return filePath;
+    return `viewer.html?file=${encodeURIComponent(filePath)}`;
+  }
+
+  /**
+   * 開啟素材預覽浮層
+   * @param {string} fileName 素材檔名（相對於 course-package/materials/）
+   */
   function openMaterialModal(fileName) {
     const modal = document.getElementById('materialModal');
     const title = document.getElementById('modalTitle');
-    const body = document.getElementById('modalBody');
-    
-    title.textContent = `素材檔案預覽: ${fileName}`;
-    body.textContent = '載入中...';
-    modal.classList.add('open');
+    const frame = document.getElementById('modalFrame');
+    const newTab = document.getElementById('modalNewTab');
 
-    // Fetch local material file
-    const url = `course-package/materials/${fileName}`;
-    fetch(url)
-      .then(response => {
-        if (!response.ok) throw new Error('檔案讀取失敗');
-        return response.text();
-      })
-      .then(text => {
-        body.textContent = text;
-      })
-      .catch(err => {
-        body.textContent = `無法預覽該檔案，這可能是因為您直接開啟了 index.html 檔案而不是使用伺服器運行。\n\n請在專案目錄下執行 'npx serve .' 並訪問 http://localhost:3000 運行。\n\n檔案路徑為：course-package/materials/${fileName}`;
-      });
+    const filePath = `course-package/materials/${fileName}`;
+    const src = resolveViewerSrc(filePath);
+
+    title.textContent = fileName;
+    newTab.href = src;
+    frame.src = src;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden'; // 鎖背景捲動
+  }
+
+  /** 關閉素材浮層並清空 iframe（釋放 PDF/HTML 背景資源） */
+  function closeMaterialModal() {
+    const modal = document.getElementById('materialModal');
+    if (!modal.classList.contains('open')) return;
+    modal.classList.remove('open');
+    document.getElementById('modalFrame').src = 'about:blank';
+    document.body.style.overflow = '';
   }
 
   function renderMaterialRow(m) {
@@ -997,14 +1019,13 @@
       }
     });
 
-    // Close Modal event
-    document.getElementById('modalClose').addEventListener('click', () => {
-      document.getElementById('materialModal').classList.remove('open');
-    });
+    // Close Modal event：✕ 按鈕、點遮罩空白處、ESC 皆可關閉
+    document.getElementById('modalClose').addEventListener('click', closeMaterialModal);
     document.getElementById('materialModal').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('materialModal')) {
-        document.getElementById('materialModal').classList.remove('open');
-      }
+      if (e.target === document.getElementById('materialModal')) closeMaterialModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeMaterialModal();
     });
   }
 
