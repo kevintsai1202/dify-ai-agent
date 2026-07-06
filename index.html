@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dify AI Agent 與 Claude Desktop 視覺影音備課實戰工作坊</title>
+  <title>Dify AI Agent 與 Claude 雲端備課實戰工作坊</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -99,23 +99,104 @@
    * Markdown Inline Helper (XSS Safe)
    * ============================================================ */
   function inlineMarkdown(str) {
-    const frag = document.createDocumentFragment();
-    if (!str) return frag;
-    // Simple bold/code/link parser
-    let index = 0;
-    const regex = /(\*\*|`|\[)(.*?)\1|(\bhttps?:\/\/\S+)/g;
-    let match;
-    let text = str;
-    
-    // We do simple string replacement for formatting:
-    // **bold** -> strong, `code` -> code, [text](url) -> link
-    let html = str
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/`(.*?)`/g, '<code>$1</code>')
-      .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
-      
-    const div = el('span');
-    div.innerHTML = html;
+    const div = el('div', { class: 'lecture-markdown-body' });
+    if (!str) return div;
+
+    // Helper for formatting inline markdown
+    function parseInline(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
+    }
+
+    const lines = str.split('\n');
+    let html = [];
+    let inList = false;
+    let inQuote = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Horizontal rule
+      if (trimmed === '---') {
+        if (inList) { html.push('</ul>'); inList = false; }
+        if (inQuote) { html.push('</blockquote>'); inQuote = false; }
+        html.push('<hr class="lecture-hr">');
+        continue;
+      }
+
+      // Headers (### or ####)
+      const headerMatch = line.match(/^(#{3,6})\s+(.*)$/);
+      if (headerMatch) {
+        if (inList) { html.push('</ul>'); inList = false; }
+        if (inQuote) { html.push('</blockquote>'); inQuote = false; }
+        const level = headerMatch[1].length;
+        const titleText = parseInline(headerMatch[2]);
+        html.push(`<h${level} class="lecture-h${level}">${titleText}</h${level}>`);
+        continue;
+      }
+
+      // Blockquotes (>)
+      const quoteMatch = line.match(/^(\s*)>\s*(.*)$/);
+      if (quoteMatch) {
+        if (inList) { html.push('</ul>'); inList = false; }
+        if (!inQuote) {
+          html.push('<blockquote class="lecture-quote">');
+          inQuote = true;
+        }
+        const quoteContent = parseInline(quoteMatch[2]);
+        html.push(`<p>${quoteContent}</p>`);
+        continue;
+      } else {
+        if (inQuote && trimmed !== '') {
+          html.push('</blockquote>');
+          inQuote = false;
+        }
+      }
+
+      // Unordered lists (* or -)
+      const listMatch = line.match(/^(\s*)([*+-])\s+(.*)$/);
+      if (listMatch) {
+        const indent = listMatch[1].length;
+        const itemText = parseInline(listMatch[3]);
+
+        if (!inList) {
+          html.push('<ul class="lecture-list">');
+          inList = true;
+        }
+
+        if (indent > 0) {
+          html.push(`<li class="lecture-list-item indent-1">${itemText}</li>`);
+        } else {
+          html.push(`<li class="lecture-list-item">${itemText}</li>`);
+        }
+        continue;
+      } else {
+        if (inList && trimmed !== '' && !line.startsWith(' ')) {
+          html.push('</ul>');
+          inList = false;
+        }
+      }
+
+      // Empty line closes open list/quote
+      if (trimmed === '') {
+        if (inList) { html.push('</ul>'); inList = false; }
+        if (inQuote) { html.push('</blockquote>'); inQuote = false; }
+        continue;
+      }
+
+      // Regular text paragraph
+      if (!inList && !inQuote) {
+        html.push(`<p class="lecture-p">${parseInline(line)}</p>`);
+      }
+    }
+
+    if (inList) html.push('</ul>');
+    if (inQuote) html.push('</blockquote>');
+
+    div.innerHTML = html.join('\n');
     return div;
   }
 
@@ -152,36 +233,8 @@
     header.append(el('h1', {}, meta.title));
     root.append(header);
 
-    const desc = el('div', { class: 'lead' }, '本工作坊專為設計與時尚相關科系教師規劃，引導教師在無程式背景下，使用本地端 Agent Skills 與雲端 Dify 進行教案編寫、視覺評審與影音編程。');
+    const desc = el('div', { class: 'lead' }, '本工作坊專為設計與時尚相關科系教師規劃，引導教師在無程式背景下，使用網頁版 Claude、Canva MCP 與 Dify 工作流 WebApp 完成備課、簡報與教學活動設計。');
     root.append(desc);
-
-    const grid = el('div', { class: 'meta-grid' });
-    grid.append(el('div', {}, '適用對象'), el('div', {}, meta.audience));
-    grid.append(el('div', {}, '課程總時數'), el('div', {}, `${meta.hoursTotal} 小時 (半天實戰工作坊)`));
-    grid.append(el('div', {}, '實作場地'), el('div', {}, meta.classroom.name));
-    grid.append(el('div', {}, '教學小組'), el('div', {}, meta.instructor));
-    root.append(grid);
-
-    // Render daily schedule table
-    const tableHeader = el('h4', {}, '課程主題時程');
-    root.append(tableHeader);
-
-    const tbl = el('table', { class: 't' });
-    const thead = el('thead');
-    thead.append(el('tr', {}, el('th', {}, '時段'), el('th', {}, '單元 ID'), el('th', {}, '單元名稱與實作核心')));
-    tbl.append(thead);
-
-    const tbody = el('tbody');
-    window.COURSE.day1.units.forEach(u => {
-      const tr = el('tr', {});
-      tr.append(el('td', {}, u.timeRange));
-      tr.append(el('td', {}, u.id));
-      const link = el('a', { href: 'javascript:;', onclick: () => scrollToSection(`day1-${u.id}`) }, u.title);
-      tr.append(el('td', {}, link));
-      tbody.append(tr);
-    });
-    tbl.append(tbody);
-    root.append(tbl);
 
     return root;
   }
@@ -211,6 +264,107 @@
     bento.append(block2);
 
     root.append(bento);
+
+    const rtfc = el('div', { class: 'rtfc-panel' });
+    rtfc.append(el('div', { class: 'rtfc-title' }, 'RTFC 提示詞框架說明'));
+    const list = el('ul', { class: 'rtfc-list' });
+    list.append(el('li', {}, el('strong', {}, 'R (Role - 角色)：'), '設定 AI 專業身份（例如「教學設計專家」），以確保對答符合特定專業視角與口吻。'));
+    list.append(el('li', {}, el('strong', {}, 'T (Task - 任務)：'), '指明具體要執行的任務（例如「產生教案草稿、討論題與評分標準說明」）。'));
+    list.append(el('li', {}, el('strong', {}, 'F (Format - 格式)：'), '規定結果的產出格式（例如「具備結構化標題與項目符號的內容」）。'));
+    list.append(el('li', {}, el('strong', {}, 'C (Context - 背景)：'), '提供關鍵的背景與限制（例如「適用於無資訊背景的大一新生，需包含 40 分鐘實作」）。'));
+    rtfc.append(list);
+    root.append(rtfc);
+
+    return root;
+  }
+
+  /* ============================================================
+   * Render Ecosystem overview (Dify + Claude + MCP)
+   * ============================================================ */
+  function renderEcosystem() {
+    const root = el('section', { class: 'chapter', id: 'ecosystem' });
+    
+    const header = el('header', {});
+    header.append(el('span', { class: 'chapter-num' }, 'COOPERATION'));
+    header.append(el('h2', {}, '備課核心工具生態系與協同分工'));
+    root.append(header);
+
+    const illContainer = el('div', { class: 'illustration', style: 'margin-bottom: 28px;' });
+    const img = el('img', {
+      src: 'images/tool-ecosystem.png',
+      alt: '備課工具生態系示意圖：Claude、Canva MCP 與 Dify 在課程中的協同分工',
+      class: 'illustration-img',
+      style: 'max-width: 100%; height: auto; border-radius: var(--r-lg); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lift);'
+    });
+    illContainer.append(img);
+    illContainer.append(el('div', { class: 'illustration-caption', style: 'font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 8px;' }, 'Claude、Canva MCP 與 Dify 的備課工具生態系示意圖'));
+    root.append(illContainer);
+
+    // 文字詳細說明 (使用三列卡片 Bento Grid)
+    const bento = el('div', { class: 'concept-grid' });
+    
+    const block1 = el('div', { class: 'concept' });
+    block1.append(el('div', { class: 'concept-heading' }, 'Claude Team (核心推理大腦)'));
+    block1.append(el('div', { class: 'concept-body' }, '扮演備課生態系中的「推理大腦」。負責日常備課、提示詞優化、創意發想、教學活動設計與資料總結；第二小時也可透過 Canva MCP 建立可編輯簡報。'));
+    bento.append(block1);
+
+    const block2 = el('div', { class: 'concept' });
+    block2.append(el('div', { class: 'concept-heading' }, 'MCP 協定橋樑 (連接應用的手腳)'));
+    block2.append(el('div', { class: 'concept-body' }, 'Model Context Protocol 是一項開放式標準協定。它並非獨立的平台，而是扮演「連線橋樑」。本課程只聚焦 Canva MCP：讓 Claude 能在授權後協助建立 Canva 投影片。'));
+    bento.append(block2);
+
+    const block3 = el('div', { class: 'concept' });
+    block3.append(el('div', { class: 'concept-heading' }, 'Dify 知識源與工作流 (強化防幻覺)'));
+    block3.append(el('div', { class: 'concept-body' }, 'Dify 負責管理院級共用知識與老師個人教材，並透過工作流 WebApp 將檢索結果交給 LLM 統整輸出，讓教案生成能同時符合學院脈絡與個人課程需求。'));
+    bento.append(block3);
+
+    root.append(bento);
+    return root;
+  }
+
+  /* ============================================================
+   * Render Dify dual knowledge flow diagram
+   * ============================================================ */
+  function renderDifyKnowledgeFlow() {
+    const root = el('section', { class: 'chapter', id: 'dify-flow' });
+
+    const header = el('header', {});
+    header.append(el('span', { class: 'chapter-num' }, 'DIFY'));
+    header.append(el('h2', {}, 'Dify 知識庫與工作流設計'));
+    root.append(header);
+
+    root.append(el('div', { class: 'lead' }, '第三、四小時的 Dify 重點包含兩件事：先理解 RAG 如何把教材變成可檢索的知識，再理解講師預建的 WebApp 如何同時引用院級知識與老師個人教材，最後由 LLM 合併成可修改的備課成果。'));
+
+    root.append(el('h4', {}, 'Dify RAG 檢索增強生成流程'));
+    const ragImage = el('figure', { class: 'flow-image-wrap' });
+    ragImage.append(el('img', {
+      src: 'images/dify-rag-flow-image2.png',
+      alt: 'Dify RAG 檢索增強生成流程圖：教材上傳、分段清洗、向量化儲存、輸入課程問題、相似內容檢索、LLM 依據資料生成',
+      class: 'flow-image'
+    }));
+    ragImage.append(el('figcaption', { class: 'illustration-caption' }, 'image2 繪製的 Dify RAG 檢索增強生成流程圖'));
+    root.append(ragImage);
+
+    root.append(el('h4', {}, 'Dify 雙知識庫合併輸出流程'));
+    const flowImage = el('figure', { class: 'flow-image-wrap' });
+    flowImage.append(el('img', {
+      src: 'images/dify-dual-knowledge-flow-image2.png',
+      alt: 'Dify 雙知識庫合併輸出流程圖：課程主題輸入、院級共用知識庫、老師個人知識庫、雙路檢索、LLM 合併與設計思考輸出',
+      class: 'flow-image'
+    }));
+    flowImage.append(el('figcaption', { class: 'illustration-caption' }, 'image2 繪製的 Dify 雙知識庫與 LLM 合併輸出流程圖'));
+    root.append(flowImage);
+
+    const guardrails = el('div', { class: 'concept-grid' });
+    const g1 = el('div', { class: 'concept' });
+    g1.append(el('div', { class: 'concept-heading' }, '資料放置原則'));
+    g1.append(el('div', { class: 'concept-body' }, '院級庫放全院共享、可被多位老師重複使用的資料；個人庫只放單一老師課程脈絡與個人教材，避免混在一起造成權限與語境混亂。'));
+    const g2 = el('div', { class: 'concept' });
+    g2.append(el('div', { class: 'concept-heading' }, '合併輸出原則'));
+    g2.append(el('div', { class: 'concept-body' }, '若院級規範與個人教材出現差異，輸出需標示差異並優先遵守院級規範；個人教材用來補足範例、活動細節與課堂語氣。'));
+    guardrails.append(g1, g2);
+    root.append(guardrails);
+
     return root;
   }
 
@@ -378,7 +532,7 @@
    * Render Unit detail
    * ============================================================ */
   function renderUnit(day, u) {
-    const details = el('details', { class: 'unit', id: `${day.id}-${u.id}` });
+    const details = el('details', { class: 'unit', id: `${day.id}-${u.id}`, open: true });
     
     const summary = el('summary', {});
     const titleWrap = el('div', { class: 'unit-title-wrap' });
@@ -399,9 +553,29 @@
     u.goals.forEach(g => goalsList.append(el('li', {}, g)));
     body.append(goalsList);
 
-    // Color Swatches / Visual Spec
-    body.append(el('h4', {}, '視覺與設計樣式 (Color Swatch)'));
-    body.append(renderColorSwatches(u.id));
+    // Color Swatches / Visual Spec (Only for specific color trend/token units)
+    if (u.id === 'd1-u4' || u.id === 'd1-u5') {
+      body.append(el('h4', {}, '視覺與設計樣式 (Color Swatch)'));
+      body.append(renderColorSwatches(u.id));
+    }
+
+    // Illustrations / Screenshot Spec (Render generated course images)
+    if (u.illustrations && u.illustrations.length) {
+      body.append(el('h4', {}, '實作情境與畫面插圖 (Illustration)'));
+      const illContainer = el('div', { class: 'illustration' });
+      u.illustrations.forEach(ill => {
+        const imgPath = `images/${ill.name}`;
+        const img = el('img', { 
+          src: imgPath, 
+          alt: ill.alt, 
+          class: 'illustration-img',
+          style: 'max-width: 100%; height: auto; border-radius: var(--r-md); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lift); margin: 8px 0;'
+        });
+        illContainer.append(img);
+        illContainer.append(el('div', { class: 'illustration-caption', style: 'font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 16px;' }, `${ill.alt} — ${ill.spec}`));
+      });
+      body.append(illContainer);
+    }
 
     // Formatted Lecture content from content.md matching this unit
     body.append(el('h4', {}, '講義與實作引導'));
@@ -454,12 +628,12 @@
         // We parse ## u-1 to ## u-9
         const units = window.COURSE.day1.units;
         units.forEach((u, index) => {
-          const nextUId = index < units.length - 1 ? `## u-${index + 2}` : '###';
+          const nextUId = index < units.length - 1 ? `## u-${index + 2}` : null;
           const uPattern = `## u-${index + 1}`;
           
           let startIndex = text.indexOf(uPattern);
           if (startIndex !== -1) {
-            let endIndex = text.indexOf(nextUId, startIndex + uPattern.length);
+            let endIndex = nextUId ? text.indexOf(nextUId, startIndex + uPattern.length) : text.length;
             if (endIndex === -1) endIndex = text.length;
             
             let block = text.substring(startIndex, endIndex);
@@ -504,7 +678,12 @@
     root.append(hero);
 
     // Units
-    d.units.forEach(u => root.append(renderUnit(d, u)));
+    d.units.forEach(u => {
+      if (u.id === 'd1-u4') {
+        root.append(renderDifyKnowledgeFlow());
+      }
+      root.append(renderUnit(d, u));
+    });
     return root;
   }
 
@@ -529,7 +708,6 @@
   /* ============================================================
    * Render Quiz
    * ============================================================ */
-  let userQuizAnswers = {};
   function renderQuiz() {
     const root = el('section', { class: 'chapter', id: 'quiz' });
     
@@ -543,87 +721,90 @@
     
     return root;
   }
-
-  function renderQuizQuestion(index) {
+    function renderQuizList() {
     const container = document.getElementById('quizContainer');
     if (!container) return;
     clear(container);
 
     const quiz = window.COURSE.quiz;
-    const q = quiz[index];
-    if (!q) return;
-
-    const qBox = el('div', { class: 'quiz-question' });
-    qBox.append(el('div', { class: 'quiz-q-text' }, `問題 ${index + 1} / ${quiz.length}：${q.question}`));
     
-    const options = el('div', { class: 'quiz-options' });
-    q.options.forEach((opt, oIdx) => {
-      const optEl = el('div', { 
-        class: 'quiz-option' + (userQuizAnswers[index] === oIdx ? ' selected' : ''),
-        onclick: () => {
-          if (state.quiz[index] != null) return; // Answered already
-          document.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected'));
-          optEl.classList.add('selected');
-          userQuizAnswers[index] = oIdx;
-          document.getElementById('submitAnswerBtn').removeAttribute('disabled');
+    // Render each question
+    quiz.forEach((q, index) => {
+      const qBox = el('div', { 
+        class: 'quiz-question', 
+        style: 'border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 24px;' 
+      });
+      qBox.append(el('div', { class: 'quiz-q-text' }, `問題 ${index + 1}：${q.question}`));
+      
+      const options = el('div', { class: 'quiz-options' });
+      const feedbackId = `feedback-${index}`;
+      
+      q.options.forEach((opt, oIdx) => {
+        const isSelected = state.quiz[index] === oIdx;
+        const hasAnswered = state.quiz[index] != null;
+        
+        let optClass = 'quiz-option';
+        if (hasAnswered) {
+          if (oIdx === q.answer) optClass += ' correct';
+          else if (isSelected) optClass += ' incorrect';
+        } else if (isSelected) {
+          optClass += ' selected';
         }
-      }, opt);
-      options.append(optEl);
+
+        const optEl = el('div', { 
+          class: optClass,
+          'data-question': index,
+          'data-option': oIdx,
+          onclick: () => {
+            if (state.quiz[index] != null) return; // Answered already
+            
+            // Clear other selected styles for this question
+            document.querySelectorAll(`.quiz-option[data-question="${index}"]`).forEach(o => o.classList.remove('selected'));
+            optEl.classList.add('selected');
+            
+            // Save answer
+            state.quiz[index] = oIdx;
+            store.save(state);
+            
+            // Show single feedback
+            showSingleQuizFeedback(index, q, oIdx);
+            updateQuizScoreboard();
+          }
+         }, opt);
+         options.append(optEl);
+      });
+      qBox.append(options);
+
+      // Feedback area
+      const feedbackBox = el('div', { id: feedbackId });
+      qBox.append(feedbackBox);
+      container.append(qBox);
+
+      // If already answered, show feedback directly
+      if (state.quiz[index] != null) {
+        showSingleQuizFeedback(index, q, state.quiz[index]);
+      }
     });
-    qBox.append(options);
-    container.append(qBox);
 
-    // Feedback and Submit button
-    const feedbackBox = el('div', { id: 'quizFeedback' });
-    container.append(feedbackBox);
-
-    const nav = el('div', { class: 'quiz-nav' });
-    
-    const prevBtn = el('button', { 
-      class: 'quiz-btn', 
-      style: 'background: var(--surface-2); color: var(--fg); border: 1px solid var(--border);',
-      onclick: () => renderQuizQuestion(index - 1),
-      disabled: index === 0
-    }, '上一題');
-    nav.append(prevBtn);
-
-    const actBtn = el('button', { 
-      class: 'quiz-btn', 
-      id: 'submitAnswerBtn',
-      disabled: userQuizAnswers[index] == null,
-      onclick: () => submitQuizAnswer(index)
-    }, '提交答案');
-    
-    // If already answered, show results
-    if (state.quiz[index] != null) {
-      showQuizAnswerResult(index, feedbackBox, actBtn);
-    }
-    
-    nav.append(actBtn);
-    container.append(nav);
+    // Score board
+    const scoreBoard = el('div', { 
+      id: 'quizScoreboard',
+      class: 'quiz-score-board',
+      style: 'margin-top: 32px; background: var(--surface-2); border-radius: var(--r-md); padding: 24px; border: 1px solid var(--border);'
+    });
+    container.append(scoreBoard);
+    updateQuizScoreboard();
   }
 
-  function submitQuizAnswer(index) {
-    const q = window.COURSE.quiz[index];
-    const userAns = userQuizAnswers[index];
-    state.quiz[index] = userAns;
-    store.save(state);
-    
-    const feedbackBox = document.getElementById('quizFeedback');
-    const actBtn = document.getElementById('submitAnswerBtn');
-    
-    showQuizAnswerResult(index, feedbackBox, actBtn);
-  }
+  function showSingleQuizFeedback(index, q, userAns) {
+    const feedbackBox = document.getElementById(`feedback-${index}`);
+    if (!feedbackBox) return;
+    clear(feedbackBox);
 
-  function showQuizAnswerResult(index, feedbackBox, actBtn) {
-    const q = window.COURSE.quiz[index];
-    const userAns = state.quiz[index];
     const isCorrect = userAns === q.answer;
     
-    clear(feedbackBox);
-    
-    // Highlight options
-    document.querySelectorAll('.quiz-option').forEach((optEl, oIdx) => {
+    // Highlight options styles
+    document.querySelectorAll(`.quiz-option[data-question="${index}"]`).forEach((optEl, oIdx) => {
       if (oIdx === q.answer) {
         optEl.className = 'quiz-option correct';
       } else if (oIdx === userAns) {
@@ -634,57 +815,58 @@
     });
 
     if (isCorrect) {
-      feedbackBox.append(el('div', { class: 'quiz-feedback correct' }, '✓ 回答正確！太棒了！'));
+      feedbackBox.append(el('div', { class: 'quiz-feedback correct', style: 'margin-top: 12px; color: var(--success); font-weight: bold;' }, '✓ 回答正確！太棒了！'));
     } else {
       const uId = q.sourceUnit.split('.')[1];
       const reviewLink = el('a', { href: 'javascript:;', onclick: () => scrollToSection(`day1-${uId}`) }, '複習此單元');
-      const wrap = el('div', { class: 'quiz-feedback incorrect' });
+      const wrap = el('div', { class: 'quiz-feedback incorrect', style: 'margin-top: 12px; color: var(--danger); font-weight: bold;' });
       wrap.append(`✗ 回答錯誤。正確答案是：「${q.options[q.answer]}」。建議 `, reviewLink);
       feedbackBox.append(wrap);
     }
-
-    // Change action button to "下一題" or "查看結算"
-    const isLast = index === window.COURSE.quiz.length - 1;
-    actBtn.textContent = isLast ? '查看結算' : '下一題';
-    actBtn.onclick = () => {
-      if (isLast) {
-        showQuizScoreBoard();
-      } else {
-        renderQuizQuestion(index + 1);
-      }
-    };
   }
 
-  function showQuizScoreBoard() {
-    const container = document.getElementById('quizContainer');
-    if (!container) return;
-    clear(container);
+  function updateQuizScoreboard() {
+    const scoreBoard = document.getElementById('quizScoreboard');
+    if (!scoreBoard) return;
+    clear(scoreBoard);
 
     const quiz = window.COURSE.quiz;
+    let answeredCount = 0;
     let correctCount = 0;
+
     quiz.forEach((q, index) => {
-      if (state.quiz[index] === q.answer) correctCount++;
+      const ans = state.quiz[index];
+      if (ans != null) {
+        answeredCount++;
+        if (ans === q.answer) correctCount++;
+      }
     });
 
-    const board = el('div', { class: 'quiz-score-board' });
-    board.append(el('div', { style: 'font-size:18px; font-weight:bold; margin-bottom:12px;' }, '測驗完成！您的得分：'));
-    board.append(el('div', { class: 'quiz-score-num' }, `${Math.round((correctCount / quiz.length) * 100)}`));
-    board.append(el('div', { style: 'color:var(--muted); margin-top:8px;' }, `答對題數：${correctCount} / ${quiz.length}`));
-    
-    const resetQuizBtn = el('button', { 
-      class: 'quiz-btn', 
-      style: 'margin-top: 24px;',
-      onclick: () => {
-        state.quiz = {};
-        userQuizAnswers = {};
-        store.save(state);
-        renderQuizQuestion(0);
-      }
-    }, '重新測驗');
-    board.append(resetQuizBtn);
+    if (answeredCount === 0) {
+      scoreBoard.innerHTML = `<div style="color: var(--muted); text-align: center;">請開始點選上方選項進行自我檢測</div>`;
+      return;
+    }
 
-    container.append(board);
+    const pct = Math.round((correctCount / quiz.length) * 100);
+    
+    scoreBoard.append(el('div', { style: 'font-size: 16px; font-weight: bold; margin-bottom: 8px;' }, '測驗進度與分數：'));
+    scoreBoard.append(el('div', { class: 'quiz-score-num', style: 'font-size: 40px; font-weight: 700; color: var(--accent-2); line-height: 1.2;' }, `${pct} 分`));
+    scoreBoard.append(el('div', { style: 'color: var(--muted); font-size: 13.5px; margin-top: 4px;' }, `答對題數：${correctCount} / ${quiz.length} (已完成 ${answeredCount} / ${quiz.length})`));
+
+    if (answeredCount === quiz.length) {
+      const resetBtn = el('button', { 
+        class: 'quiz-btn',
+        style: 'margin-top: 16px;',
+        onclick: () => {
+          state.quiz = {};
+          store.save(state);
+          renderQuizList();
+        }
+      }, '重新測驗');
+      scoreBoard.append(resetBtn);
+    }
   }
+
 
   /* ============================================================
    * Navigation and Progress UI
@@ -703,9 +885,20 @@
     scLink.append(el('span', { class: 'nav-num' }, '★'), '共用實戰案例');
     nav.append(scLink);
 
+    // Ecosystem
+    const ecoLink = el('div', { class: 'nav-link', 'data-target': 'ecosystem', onclick: () => scrollToSection('ecosystem') });
+    ecoLink.append(el('span', { class: 'nav-num' }, '❖'), '工具生態分工');
+    nav.append(ecoLink);
+
     // Day units
     nav.append(el('div', { class: 'nav-section-title' }, '課程單元目錄'));
     window.COURSE.day1.units.forEach((u, i) => {
+      if (u.id === 'd1-u4') {
+        const flowLink = el('div', { class: 'nav-link', 'data-target': 'dify-flow', onclick: () => scrollToSection('dify-flow') });
+        flowLink.append(el('span', { class: 'nav-num' }, '↧'), 'Dify 知識庫流程');
+        nav.append(flowLink);
+      }
+
       const link = el('div', { class: 'nav-link', 'data-target': `day1-${u.id}`, onclick: () => {
         scrollToSection(`day1-${u.id}`);
         // open accordion
@@ -766,6 +959,7 @@
     // Render chapters
     content.append(renderOverview(window.COURSE.meta));
     content.append(renderSharedCase(window.COURSE.sharedCase));
+    content.append(renderEcosystem());
     content.append(renderDay('day1'));
     content.append(renderMaterials());
     content.append(renderQuiz());
@@ -778,8 +972,8 @@
     // Fetch content.md
     fetchAndPopulateLectures();
 
-    // 初始化第一個測驗問題（在 DOM 已掛載之後）
-    renderQuizQuestion(0);
+    // 渲染自我檢測測驗題庫
+    renderQuizList();
 
     // Reset button
     document.getElementById('resetBtn').addEventListener('click', () => {
@@ -798,7 +992,7 @@
         });
         
         updateProgressUI();
-        renderQuizQuestion(0);
+        renderQuizList();
         scrollToSection('overview');
       }
     });

@@ -414,6 +414,33 @@ section.chapter > header {
   font-size: 13.5px;
 }
 
+/* ===================== RTFC teaching block ===================== */
+.rtfc-panel {
+  margin: 28px 0 0;
+  padding: 28px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--accent);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lift);
+}
+.rtfc-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.rtfc-list {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 15px;
+  line-height: 1.9;
+}
+.rtfc-list li {
+  margin-bottom: 6px;
+}
+
 /* ===================== prompt card (RTFC) ===================== */
 .prompt-card {
   background: oklch(18% 0.015 200); /* 暗色底更具質感 */
@@ -609,6 +636,9 @@ section.chapter > header {
   align-items: center;
   border: 1px solid var(--border);
 }
+.material-row > div {
+  min-width: 0;
+}
 .material-tag {
   font-size: 11px;
   font-weight: 700;
@@ -621,6 +651,7 @@ section.chapter > header {
   font-weight: 700;
   font-size: 14.5px;
   color: var(--fg);
+  overflow-wrap: anywhere;
 }
 .material-name a {
   color: var(--accent-deep);
@@ -692,6 +723,68 @@ section.chapter > header {
   font-size: 12px;
   color: var(--muted);
   text-align: center;
+}
+
+/* ===================== Dify flow diagram ===================== */
+.flow-image-wrap {
+  margin: 24px 0;
+  padding: 0;
+}
+.flow-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lift);
+  background: var(--surface);
+}
+.flow-diagram {
+  margin: 24px 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.flow-node {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 12px 16px;
+  align-items: start;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lift);
+}
+.flow-step {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: white;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+.flow-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.flow-body {
+  grid-column: 2;
+  color: var(--fg);
+  font-size: 14px;
+}
+.flow-arrow {
+  color: var(--accent-2);
+  font-size: 24px;
+  line-height: 1;
+  text-align: center;
+  font-weight: 700;
 }
 
 /* ===================== quiz container ===================== */
@@ -862,4 +955,63 @@ section.chapter > header {
   .day-hero-numeral { font-size: 80px; }
   .topbar { padding: 0 20px; }
   .content { padding: 24px 20px 80px; }
+  .flow-node { grid-template-columns: 40px 1fr; padding: 16px; }
+  .flow-body { grid-column: 1 / -1; }
+  .material-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+/* ===================== lecture markdown body styling ===================== */
+.lecture-markdown-body {
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--fg);
+}
+.lecture-p {
+  margin: 0 0 12px 0;
+  text-wrap: pretty;
+}
+.lecture-h3, .lecture-h4, .lecture-h5 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--fg);
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+.lecture-h3 { font-size: 17px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.lecture-h4 { font-size: 15.5px; }
+.lecture-h5 { font-size: 14.5px; color: var(--muted); }
+
+.lecture-list {
+  padding-left: 20px;
+  margin: 0 0 14px 0;
+}
+.lecture-list-item {
+  margin-bottom: 6px;
+  list-style-type: disc;
+}
+.lecture-list-item.indent-1 {
+  margin-left: 20px;
+  list-style-type: circle;
+}
+.lecture-quote {
+  margin: 14px 0;
+  padding: 12px 18px;
+  background: var(--surface-2);
+  border-left: 4px solid var(--accent-2);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.lecture-quote p {
+  margin: 0;
+}
+.lecture-hr {
+  border: 0;
+  height: 1px;
+  background: var(--border-strong);
+  margin: 24px 0;
 }

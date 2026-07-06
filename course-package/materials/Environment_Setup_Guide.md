@@ -1,17 +1,26 @@
-# Windows 環境建置說明書
+# 課前帳號與瀏覽器準備清單
 
-1. **Claude Desktop**  
-   - 下載網址: [https://claude.ai/download](https://claude.ai/download)
-   - 安裝後請使用 Anthropic 帳戶登入。
+本工作坊以網頁端操作為主，學員不需要安裝 Git、Node.js、Python 或任何命令列工具。請在課前完成以下檢查，避免現場卡在登入與授權。
 
-2. **Git for Windows**  
-   - 下載網址: [https://git-scm.com/download/win](https://git-scm.com/download/win)
-   - 請下載 64-bit Git for Windows Setup。一律按下一步完成安裝。
+## 必備帳號
+1. **Claude Team**
+   - 確認可登入 [https://claude.ai](https://claude.ai)。
+   - 確認帳號已切換到學校提供的 Team 工作區。
 
-3. **Node.js (LTS)**  
-   - 下載網址: [https://nodejs.org/](https://nodejs.org/)
-   - 下載並安裝 LTS (長期維護版)。
+2. **Canva**
+   - 確認可登入 Canva。
+   - 第二小時會在 Claude 中開啟 Canva 連接授權，用於生成可編輯簡報。
 
-4. **Python 3.10+**  
-   - 下載網址: [https://www.python.org/downloads/](https://www.python.org/downloads/)
-   - 安裝時**務必勾選** `Add python.exe to PATH`。
+3. **Dify.ai 團隊版**
+   - 確認可登入 Dify.ai 團隊版工作區。
+   - 第三小時會上傳 1-2 份個人課程教材到老師個人知識庫。
+
+## 建議攜帶資料
+- 1-2 份個人課程大綱、講義或教案 PDF / Word。
+- 一個下學期想實際備課的課程主題。
+- 可用於課堂簡報的課程標題、週次主題或作業說明。
+
+## 現場操作範圍
+- Claude.ai：日常備課、提示詞優化、Artifacts 簡報。
+- Canva：透過 Canva MCP 生成可編輯投影片。
+- Dify.ai：上傳教材、理解院級共用庫與老師個人庫、使用講師預建的工作流 WebApp。

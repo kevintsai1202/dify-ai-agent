@@ -1,0 +1,7 @@
+# 驗證用暫存輸出（Playwright 截圖、serve 日誌等），非網站素材
+output/
+
+# 系統與編輯器暫存檔
+.DS_Store
+Thumbs.db
+node_modules/
