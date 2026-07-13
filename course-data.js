@@ -130,7 +130,10 @@ window.COURSE = {
         ],
         prompts: [],
         materials: [
-          { id: "m-4", name: "Dify_Knowledge_Base_Setup.md", type: "MD 講義", desc: "Dify 雙層知識庫建立與文件上傳分段設定指南" }
+          { id: "m-4", name: "Dify_Knowledge_Base_Setup.md", type: "MD 講義", desc: "Dify 雙層知識庫建立與文件上傳分段設定指南" },
+          { id: "m-7", name: "shared-kb/LTU_Design_College_Future_Direction.md", type: "共用庫示範", desc: "院級共用庫示範文件：嶺東設計學院未來發展走向（AI × 永續 × 產學）" },
+          { id: "m-8", name: "shared-kb/2026_Design_Trends_Report.md", type: "共用庫示範", desc: "院級共用庫示範文件：2026 年設計潮流趨勢報告與教學引用建議" },
+          { id: "m-9", name: "shared-kb/AI_in_Design_Education_Guideline.md", type: "共用庫示範", desc: "院級共用庫示範文件：AI 融入設計系教學指引與評量原則" }
         ],
         illustrations: [
           { name: "day1-u4-dify-kb.png", kind: "screenshot", alt: "Dify 知識庫設定界面", spec: "Dify 知識庫中上傳 PDF 並進行向量分段的畫面" }
@@ -179,6 +182,40 @@ window.COURSE = {
         illustrations: [
           { name: "day1-u6-reflection.png", kind: "scene", alt: "老師反思與交流畫面", spec: "老師們分享各自領域如何利用設計思考結合 AI 提升備課效率的場景" }
         ]
+      },
+      {
+        id: "d1-u7",
+        title: "AI 輔助評分整合流程（課後延伸）",
+        timeRange: "課後延伸",
+        goals: [
+          "操作講師預建的兩階段評分工作流：階段一「評分標準生成器」依課綱產生 Rubric 並確認定稿；階段二「作業評分工作流」帶入 Rubric、上傳學生作業由 AI 分析產出評分報告草稿",
+          "理解 Human in the Loop 設計：Rubric 確認與最終分數核定兩個檢查點都由老師把關，AI 建議分僅供參考"
+        ],
+        tasks: [
+          { id: "d1-u7-t1", text: "【階段一】在「評分標準生成器」WebApp 貼上課綱與作業說明，產生 Rubric 草稿，逐列確認或修改後複製保存定稿（HITL 檢查點 1）" },
+          { id: "d1-u7-t2", text: "【階段二】在「作業評分」WebApp 貼上定稿 Rubric、上傳範例學生報告（sample_student_report.md），取得 AI 逐構面分析：證據引用、優缺點與建議分數" },
+          { id: "d1-u7-t3", text: "檢視評分報告草稿，核對每則證據引用是否真實存在於報告原文中（防幻覺）" },
+          { id: "d1-u7-t4", text: "練習調整至少一個構面的分數並填寫調分理由，按定稿輸出「AI 建議分 vs 老師核定分」對照報告（HITL 檢查點 2）" }
+        ],
+        prompts: [
+          {
+            id: "p-rubric-gen",
+            title: "Rubric 評分標準生成 Prompt（工作流內建邏輯）",
+            body: "你是設計學院的課程評量顧問。根據以下課綱與作業說明，以及檢索到的院級評量原則，產出 4–6 個評分構面的 Rubric 表格，每構面含權重與 5/3/1 分級描述。權重總和須為 100%，且『設計歷程』構面不得低於 30%。"
+          },
+          {
+            id: "p-report-analysis",
+            title: "學生報告分析 Prompt（工作流內建邏輯）",
+            body: "依下列 Rubric 逐構面評估這份學生報告。每個構面必須引用報告原文作為證據，禁止臆測報告中沒有的內容；證據不足時標註『資料不足，請老師人工判讀』而不是猜一個分數。最後彙整各構面建議分數、加權總分與一段給學生的友善回饋。"
+          }
+        ],
+        materials: [
+          { id: "m-10", name: "Dify_Grading_Workflow.md", type: "MD 講義", desc: "AI 輔助評分整合流程操作指南：Rubric 生成、報告分析與 Human in the Loop 核定" },
+          { id: "m-11", name: "sample_student_report.md", type: "練習素材", desc: "虛構學生期末報告範例，供評分工作流實作練習（已去識別化）" }
+        ],
+        illustrations: [
+          { name: "day1-u7-grading-flow.png", kind: "diagram", alt: "AI 輔助評分整合流程圖", spec: "課綱 → Rubric 生成 → 老師確認 → 上傳學生報告 → AI 逐項分析 → 評分報告草稿 → 老師核定分數 → 定稿，兩個 HITL 檢查點以醒目標記" }
+        ]
       }
     ]
   },
@@ -190,10 +227,15 @@ window.COURSE = {
     { id: "m-3", name: "Claude_Artifacts_Guide.md", type: "MD 講義", desc: "Claude Artifacts 生成互動簡報與離線固定色下載指南" },
     { id: "m-4", name: "Dify_Knowledge_Base_Setup.md", type: "MD 講義", desc: "Dify 雙層知識庫建立與文件上傳分段設定指南" },
     { id: "m-5", name: "Dify_Workflow_Design_Thinking.md", type: "MD 講義", desc: "Dify 工作流設計思考三階段與網頁 WebApp 實作操作指南" },
-    { id: "m-6", name: "Workshop_Reflection_Template.md", type: "MD 表單", desc: "工作坊教學應用反思與問卷填寫連結" }
+    { id: "m-6", name: "Workshop_Reflection_Template.md", type: "MD 表單", desc: "工作坊教學應用反思與問卷填寫連結" },
+    { id: "m-7", name: "shared-kb/LTU_Design_College_Future_Direction.md", type: "共用庫示範", desc: "院級共用庫示範文件：嶺東設計學院未來發展走向（AI × 永續 × 產學）" },
+    { id: "m-8", name: "shared-kb/2026_Design_Trends_Report.md", type: "共用庫示範", desc: "院級共用庫示範文件：2026 年設計潮流趨勢報告與教學引用建議" },
+    { id: "m-9", name: "shared-kb/AI_in_Design_Education_Guideline.md", type: "共用庫示範", desc: "院級共用庫示範文件：AI 融入設計系教學指引與評量原則" },
+    { id: "m-10", name: "Dify_Grading_Workflow.md", type: "MD 講義", desc: "AI 輔助評分整合流程操作指南：Rubric 生成、報告分析與 Human in the Loop 核定" },
+    { id: "m-11", name: "sample_student_report.md", type: "練習素材", desc: "虛構學生期末報告範例，供評分工作流實作練習（已去識別化）" }
   ],
 
-  // 課程自我檢測問答題庫 (4題選擇題)
+  // 課程自我檢測問答題庫 (5題選擇題)
   quiz: [
     {
       id: "q1",
@@ -242,6 +284,18 @@ window.COURSE = {
       ],
       answer: 1,
       sourceUnit: "day1.d1-u4"
+    },
+    {
+      id: "q5",
+      question: "關於「AI 輔助評分整合流程」中 Human in the Loop（人在迴路）的設計，下列敘述何者正確？",
+      options: [
+        "AI 產出的評分報告會直接寄給學生，老師不需介入以確保客觀公正",
+        "老師只需在最開始提供課綱，之後的 Rubric 內容與最終分數都由 AI 全自動決定",
+        "流程設有兩個確認點：老師須先確認或修改 AI 產生的 Rubric，AI 分析學生報告後，最終分數也須由老師核可或調整（調分須填理由）才能定稿",
+        "Human in the Loop 是指學生可以參與流程，自行修改 AI 給自己的分數"
+      ],
+      answer: 2,
+      sourceUnit: "day1.d1-u7"
     }
   ]
 };

@@ -100,6 +100,53 @@ try {
     await page.close();
   }
 
+  // === 4. 院級共用庫示範文件（shared-kb 子資料夾）可從主站 modal 開啟 ===
+  {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`${base}/index.html`, { waitUntil: 'networkidle' });
+    // 依檔名文字找 shared-kb 素材連結（含子資料夾路徑）
+    const kbLink = page.locator('.material-name a', { hasText: 'shared-kb/2026_Design_Trends_Report.md' }).first();
+    await kbLink.waitFor({ timeout: 5000 });
+    await kbLink.click();
+    await page.waitForSelector('#materialModal.open', { timeout: 5000 });
+    const kbSrc = await page.getAttribute('#modalFrame', 'src');
+    const kbFrame = page.frameLocator('#modalFrame');
+    await kbFrame.locator('.md-content h1').waitFor({ timeout: 5000 });
+    const kbH1 = await kbFrame.locator('.md-content h1').first().textContent();
+    results.push(`shared-kb 素材: iframe.src="${kbSrc}" h1="${kbH1?.trim()}"`);
+    await page.screenshot({ path: `${outDir}/modal-shared-kb.png`, fullPage: false });
+    await page.close();
+  }
+
+  // === 5. u-7「AI 輔助評分整合流程」單元渲染 + 測驗題數 ===
+  {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`${base}/index.html`, { waitUntil: 'networkidle' });
+    // 單元標題出現在頁面上
+    const unitTitle = page.locator('text=AI 輔助評分整合流程').first();
+    await unitTitle.waitFor({ timeout: 5000 });
+    // 評分講義素材可從 modal 開啟
+    const gLink = page.locator('.material-name a', { hasText: 'Dify_Grading_Workflow.md' }).first();
+    await gLink.click();
+    await page.waitForSelector('#materialModal.open', { timeout: 5000 });
+    const gFrame = page.frameLocator('#modalFrame');
+    const gH1 = await gFrame.locator('.md-content h1').first().textContent({ timeout: 5000 });
+    await page.keyboard.press('Escape');
+    // 測驗題數應等於 COURSE.quiz.length（動態渲染）
+    const quizCount = await page.evaluate(() => ({
+      data: window.COURSE.quiz.length,
+      dom: document.querySelectorAll('.quiz-question').length,
+    }));
+    // 流程圖需真正載入成功（naturalWidth > 0），避免破圖上線
+    const flowImg = await page.evaluate(() => {
+      const img = document.querySelector('img[src="images/day1-u7-grading-flow.png"]');
+      return img ? { found: true, loaded: img.complete && img.naturalWidth > 0 } : { found: false, loaded: false };
+    });
+    results.push(`u-7 單元渲染: 講義 h1="${gH1?.trim()}" 測驗題數 data=${quizCount.data} dom=${quizCount.dom} 流程圖 found=${flowImg.found} loaded=${flowImg.loaded}`);
+    await page.screenshot({ path: `${outDir}/unit-u7.png`, fullPage: false });
+    await page.close();
+  }
+
   console.log('\n=== 驗證結果 ===');
   results.forEach((r) => console.log('✓ ' + r));
   console.log(`\n截圖已存於 ${outDir}/（viewer-md-light / viewer-md-dark / modal-iframe）`);
