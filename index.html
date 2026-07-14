@@ -710,6 +710,91 @@
   }
 
   /* ============================================================
+   * Render Supplement chapter（補充章節：AI 時代設計課程轉型）
+   * ============================================================ */
+  /**
+   * 渲染補充章節：AI 時代設計課程轉型指引
+   * 內容重點：評分重心轉移、四階段人機協同、Rubric 權重重構，
+   * 並對接本工作坊的 Claude（u-1/u-3）與 Dify（u-4/u-5/u-7）工具鏈。
+   */
+  function renderSupplement() {
+    const root = el('section', { class: 'chapter', id: 'supplement' });
+
+    const header = el('header', {});
+    header.append(el('span', { class: 'chapter-num' }, 'SUPPLEMENT'));
+    header.append(el('h2', {}, '補充章節：AI 時代設計課程轉型'));
+    root.append(header);
+
+    root.append(el('div', { class: 'lead' },
+      '當學生用幾句提示詞就能生成精美的服裝效果圖，設計教育並非失效，而是從「技法勞動」回歸「思維與本質」的契機——教學重點從 How（如何畫出來）轉向 Why（為什麼這樣設計）與 What（什麼細節能打動人）。本章節整理課程轉型重點，並示範如何用工作坊的 Claude 與 Dify 工具鏈落地。'));
+
+    // 評分重心三大轉移（概念卡片）
+    const shifts = el('div', { class: 'concept-grid' });
+    const s1 = el('div', { class: 'concept' });
+    s1.append(el('div', { class: 'concept-heading' }, '設計脈絡 Design Context'));
+    s1.append(el('div', { class: 'concept-body' }, '靈感來源、文化考證與核心痛點洞察，取代單純的繪圖精緻度成為主要評分對象。'));
+    const s2 = el('div', { class: 'concept' });
+    s2.append(el('div', { class: 'concept-heading' }, '控制與迭代 Control & Iteration'));
+    s2.append(el('div', { class: 'concept-body' }, '學生須繳交提示詞工程日誌（Prompt Log）與迭代過程圖，證明能精準控制 AI 多輪修改，而非靠隨機碰撞運氣。'));
+    const s3 = el('div', { class: 'concept' });
+    s3.append(el('div', { class: 'concept-heading' }, '物理落地性 Physical Feasibility'));
+    s3.append(el('div', { class: 'concept-body' }, '版型如何剪裁、布料垂墜感是否成立——戳破 AI 的視覺幻覺：畫得出來不代表做得出來。'));
+    shifts.append(s1, s2, s3);
+    root.append(shifts);
+
+    // 人機協同四階段流程
+    root.append(el('h4', {}, '人機協同四階段流程'));
+    root.append(el('pre', { class: 'prompt-text', style: 'white-space: pre; overflow-x: auto;' },
+      '【靈感與概念】──>【AI 概念探索】──>【技術與實體解構】──>【最終成果與策展】\n 人：文化、痛點、觀點   AI：快速發散、配色    人：版型、材質、工藝     人：故事、感官、體驗'));
+
+    // Rubric 權重重構表
+    root.append(el('h4', {}, '評分表（Rubric）權重重構'));
+    const tableWrap = el('div', { style: 'overflow-x: auto; margin: 12px 0;' });
+    const table = el('table', { class: 'rubric-table', style: 'width:100%; border-collapse: collapse; font-size: 13.5px;' });
+    const rows = [
+      ['評估維度', '傳統比例', 'AI 時代建議比例', '評分具體指標'],
+      ['視覺呈現效果', '40%', '15%', '畫面美感（手繪 / 3D / AI 生成僅佔基本分）'],
+      ['設計邏輯與考證', '20%', '30%', '文化研究、歷史考證、受眾痛點分析深度'],
+      ['AI 協同與迭代控制', '0%', '20%', 'Prompt Log 的思考邏輯，非一次性隨機生成'],
+      ['工藝與物理可行性', '30%', '25%', '結構、打版、布料材質的現實落地可能性'],
+      ['口頭發表與故事力', '10%', '10%', '闡述設計理念的說服力與個人觀點']
+    ];
+    rows.forEach((r, i) => {
+      const tr = el('tr', {});
+      r.forEach(cell => tr.append(el(i === 0 ? 'th' : 'td', {
+        style: 'border: 1px solid var(--border-strong); padding: 8px 10px; text-align: left;' + (i === 0 ? ' background: var(--surface-2);' : '')
+      }, cell)));
+      table.append(tr);
+    });
+    tableWrap.append(table);
+    root.append(tableWrap);
+
+    // 與工作坊工具鏈的落地對接
+    root.append(el('h4', {}, '與本工作坊工具鏈的落地對接'));
+    const bridge = el('div', { class: 'concept-grid' });
+    const b1 = el('div', { class: 'concept' });
+    b1.append(el('div', { class: 'concept-heading' }, 'Dify 對接（u-4 / u-5 / u-7）'));
+    b1.append(el('div', { class: 'concept-body' }, '將本指引放入院級共用庫供工作流檢索；把上表權重貼進 u-7「評分標準生成器」產出 Rubric（HITL 檢查點 1）；要求學生連同作品繳交 Prompt Log，讓「作業評分工作流」對「AI 協同與迭代控制」構面引用日誌原文作證據，分數仍由老師核定（HITL 檢查點 2）。'));
+    const b2 = el('div', { class: 'concept' });
+    b2.append(el('div', { class: 'concept-heading' }, 'Claude 對接（u-1 / u-3；進階可用 Claude Code）'));
+    b2.append(el('div', { class: 'concept-body' }, '用 Claude Team 執行「物理落地性檢核」與「極限控制挑戰出題」Prompt（見補充講義全文）；進階教師可用 Claude Code 批次整理全班 Prompt Log 對照表、彙整迭代圖輯為課程網站素材，或呼叫 Dify API 批次跑評分工作流。'));
+    bridge.append(b1, b2);
+    root.append(bridge);
+
+    // 補充講義全文連結（開啟素材預覽浮層）
+    root.append(el('h4', {}, '補充講義全文'));
+    const mList = el('div', { class: 'materials' });
+    mList.append(renderMaterialRow({
+      name: 'AI_Design_Course_Transformation.md',
+      type: '補充講義',
+      desc: 'AI 時代設計課程轉型指引：四單元課程模組、Rubric 權重重構與 Claude / Dify 落地對接完整說明'
+    }));
+    root.append(mList);
+
+    return root;
+  }
+
+  /* ============================================================
    * Render Materials overview
    * ============================================================ */
   function renderMaterials() {
@@ -933,6 +1018,11 @@
 
     // Materials & Quiz
     nav.append(el('div', { class: 'nav-section-title' }, '輔助工具與評量'));
+
+    // 補充章節：AI 時代設計課程轉型
+    const supLink = el('div', { class: 'nav-link', 'data-target': 'supplement', onclick: () => scrollToSection('supplement') });
+    supLink.append(el('span', { class: 'nav-num' }, '✚'), '補充：AI 時代課程轉型');
+    nav.append(supLink);
     
     const matLink = el('div', { class: 'nav-link', 'data-target': 'materials', onclick: () => scrollToSection('materials') });
     matLink.append(el('span', { class: 'nav-num' }, '⬇'), '教材素材總覽');
@@ -983,6 +1073,7 @@
     content.append(renderSharedCase(window.COURSE.sharedCase));
     content.append(renderEcosystem());
     content.append(renderDay('day1'));
+    content.append(renderSupplement());
     content.append(renderMaterials());
     content.append(renderQuiz());
 

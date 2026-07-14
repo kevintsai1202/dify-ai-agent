@@ -232,7 +232,8 @@ window.COURSE = {
     { id: "m-8", name: "shared-kb/2026_Design_Trends_Report.md", type: "共用庫示範", desc: "院級共用庫示範文件：2026 年設計潮流趨勢報告與教學引用建議" },
     { id: "m-9", name: "shared-kb/AI_in_Design_Education_Guideline.md", type: "共用庫示範", desc: "院級共用庫示範文件：AI 融入設計系教學指引與評量原則" },
     { id: "m-10", name: "Dify_Grading_Workflow.md", type: "MD 講義", desc: "AI 輔助評分整合流程操作指南：Rubric 生成、報告分析與 Human in the Loop 核定" },
-    { id: "m-11", name: "sample_student_report.md", type: "練習素材", desc: "虛構學生期末報告範例，供評分工作流實作練習（已去識別化）" }
+    { id: "m-11", name: "sample_student_report.md", type: "練習素材", desc: "虛構學生期末報告範例，供評分工作流實作練習（已去識別化）" },
+    { id: "m-12", name: "AI_Design_Course_Transformation.md", type: "補充講義", desc: "AI 時代設計課程轉型指引：評分重心轉移、四階段人機協同、Rubric 權重重構，與 Claude / Dify 工具鏈落地對接" }
   ],
 
   // 課程自我檢測問答題庫 (5題選擇題)
