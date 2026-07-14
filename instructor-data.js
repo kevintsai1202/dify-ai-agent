@@ -1,0 +1,60 @@
+// 由 scripts/scrape-youtube-channel.mjs 自動產生，請勿手動編輯
+// 重跑：npm run scrape:instructor
+window.INSTRUCTOR = {
+  "source": "https://www.youtube.com/@pg-kt",
+  "scrapedAt": "2026-05-05T06:34:46.713Z",
+  "channel": {
+    "name": "凱文大叔AI程式設計教室",
+    "handle": "@pg-kt",
+    "subscriberCount": "1.38萬位訂閱者",
+    "videoCount": "117 部影片",
+    "avatar": "https://yt3.googleusercontent.com/23Bw38nTHSgwMaOiocBTUnVuxL7MRRkPacOyZDLb6oGSZZzpxiGMO9ENvwjZmh0mKE9PQW6y2Q=s160-c-k-c0x00ffffff-no-rj",
+    "banner": null,
+    "description": "擁有超過 20 年的 Java 開發經驗，對 Java 生態系統了如指掌，擅長使用 Spring Boot 框架開發高效穩定的系統。除了全職軟體工程師的角色，也在 Amazing Talker 擔任程式語言講師，透過深入淺出的教學方式，幫助學員快速掌握技術。",
+    "url": "https://www.youtube.com/@pg-kt"
+  },
+  "recentVideos": [
+    {
+      "title": "【凱文大叔】手把手教你 Antigravity 設定與應用：規則（Rules）＋神技能（Skills）＋自動化（Workflows）打造最強AI 超能力！",
+      "url": "https://www.youtube.com/watch?v=e-WNdM4JO2U",
+      "thumbnail": "https://img.youtube.com/vi/e-WNdM4JO2U/hqdefault.jpg",
+      "views": "觀看次數：4.7萬次",
+      "viewsCount": 47000
+    },
+    {
+      "title": "不用花錢！3大AI影片生成神器大盤點，每天免費爽做50支影片？還教你去除浮水印！",
+      "url": "https://www.youtube.com/watch?v=uO6d_MW7GN4",
+      "thumbnail": "https://img.youtube.com/vi/uO6d_MW7GN4/hqdefault.jpg",
+      "views": "觀看次數：2.7萬次",
+      "viewsCount": 27000
+    },
+    {
+      "title": "Chrome DevTools MCP 自動測試神器｜AI自動化測試 + SOP文件自動生成",
+      "url": "https://www.youtube.com/watch?v=4FaZOn9XW6k&pp=0gcJCd4KAYcqIYzv",
+      "thumbnail": "https://img.youtube.com/vi/4FaZOn9XW6k/hqdefault.jpg",
+      "views": "觀看次數：5409次",
+      "viewsCount": 5409
+    },
+    {
+      "title": "最智能的 AI 網路爬蟲 - BrowserAct | no code 完成爬蟲設計 | 網路爬蟲界的n8n",
+      "url": "https://www.youtube.com/watch?v=3_yaY3osB8c",
+      "thumbnail": "https://img.youtube.com/vi/3_yaY3osB8c/hqdefault.jpg",
+      "views": "觀看次數：4660次",
+      "viewsCount": 4660
+    },
+    {
+      "title": "Gemini CLI 最強改版 | Extensions 擴展插件全面解析 | Pro / Ultra 用戶額度多2.5倍",
+      "url": "https://www.youtube.com/watch?v=XvAjTZOPgIA&pp=0gcJCd4KAYcqIYzv",
+      "thumbnail": "https://img.youtube.com/vi/XvAjTZOPgIA/hqdefault.jpg",
+      "views": "觀看次數：4469次",
+      "viewsCount": 4469
+    },
+    {
+      "title": "Claude Code推出原生安裝 | 以後不用透過npm安裝 | 正確安裝方式才能完全更新",
+      "url": "https://www.youtube.com/watch?v=0O5MxC-vuy4",
+      "thumbnail": "https://img.youtube.com/vi/0O5MxC-vuy4/hqdefault.jpg",
+      "views": "觀看次數：3741次",
+      "viewsCount": 3741
+    }
+  ]
+};

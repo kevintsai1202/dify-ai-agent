@@ -66,6 +66,7 @@
   </div>
 
   <script src="course-data.js"></script>
+  <script src="instructor-data.js"></script>
   <script>
   /* ============================================================
    * Storage & State Management
@@ -229,6 +230,79 @@
   /* ============================================================
    * Render overview
    * ============================================================ */
+  /* ============================================================
+   * Render instructor（講師個人介紹，來源：instructor-data.js）
+   * 資料由 ai-workshop 專案的 Playwright 爬蟲擷取自 YouTube @pg-kt
+   * ============================================================ */
+  function renderInstructor() {
+    // 無講師資料時不渲染此區塊
+    if (!window.INSTRUCTOR || !window.INSTRUCTOR.channel) return null;
+    const data = window.INSTRUCTOR;
+    const ch = data.channel;
+
+    const root = el('section', { class: 'chapter', id: 'instructor' });
+    const header = el('header', {});
+    header.append(el('span', { class: 'chapter-num' }, 'INSTRUCTOR'));
+    header.append(el('h2', {}, '授課講師'));
+    root.append(header);
+
+    // 講師卡片：頭像 + 基本資訊
+    const card = el('div', { class: 'instructor-card' });
+    card.append(el('img', {
+      class: 'instructor-avatar',
+      src: encodeURIComponent('圓形去背.png'), // 中文檔名需 URL-encode
+      alt: ch.name || '講師頭像',
+      loading: 'lazy'
+    }));
+
+    const meta = el('div', { class: 'instructor-meta' });
+    meta.append(el('div', { class: 'instructor-name' }, ch.name || '講師'));
+
+    // YouTube 頻道連結
+    const handleRow = el('div', { class: 'instructor-handle' });
+    handleRow.append('YouTube 頻道：');
+    handleRow.append(el('a', { href: ch.url, target: '_blank', rel: 'noopener' }, ch.handle || ch.name));
+    meta.append(handleRow);
+
+    // 訂閱數 / 影片數徽章
+    const stats = el('div', { class: 'instructor-stats' });
+    if (ch.subscriberCount) {
+      stats.append(el('span', { class: 'instructor-stat' },
+        el('strong', {}, '訂閱'), ch.subscriberCount.replace(/位訂閱者|subscribers?/gi, '').trim()));
+    }
+    if (ch.videoCount) {
+      stats.append(el('span', { class: 'instructor-stat' },
+        el('strong', {}, '影片'), ch.videoCount.replace(/部影片|videos?/gi, '').trim()));
+    }
+    if (stats.children.length) meta.append(stats);
+
+    if (ch.description) meta.append(el('p', { class: 'instructor-bio' }, ch.description));
+    card.append(meta);
+
+    const wrapper = el('div', {});
+    wrapper.append(card);
+
+    // 頻道最熱門影片
+    if (Array.isArray(data.recentVideos) && data.recentVideos.length) {
+      const vidSection = el('div', { class: 'instructor-videos' });
+      vidSection.append(el('h4', { class: 'instructor-videos-title' }, '頻道熱門影片'));
+      const grid = el('div', { class: 'instructor-videos-grid' });
+      data.recentVideos.forEach(v => {
+        if (!v.url) return;
+        const a = el('a', { class: 'instructor-video', href: v.url, target: '_blank', rel: 'noopener' });
+        if (v.thumbnail) a.append(el('img', { class: 'instructor-video-thumb', src: v.thumbnail, alt: v.title || '', loading: 'lazy' }));
+        a.append(el('div', { class: 'instructor-video-title' }, v.title || '(未命名)'));
+        if (v.views) a.append(el('div', { class: 'instructor-video-views' }, v.views));
+        grid.append(a);
+      });
+      vidSection.append(grid);
+      wrapper.append(vidSection);
+    }
+
+    root.append(wrapper);
+    return root;
+  }
+
   function renderOverview(meta) {
     const root = el('section', { class: 'chapter', id: 'overview' });
     
@@ -982,6 +1056,13 @@
     const nav = document.getElementById('nav');
     clear(nav);
 
+    // Instructor（講師個人介紹，僅在有資料時顯示於最上方）
+    if (window.INSTRUCTOR && window.INSTRUCTOR.channel) {
+      const insLink = el('div', { class: 'nav-link', 'data-target': 'instructor', onclick: () => scrollToSection('instructor') });
+      insLink.append(el('span', { class: 'nav-num' }, '👤'), '授課講師');
+      nav.append(insLink);
+    }
+
     // Overview
     const ovLink = el('div', { class: 'nav-link active', 'data-target': 'overview', onclick: () => scrollToSection('overview') });
     ovLink.append(el('span', { class: 'nav-num' }, '00'), '工作坊總覽');
@@ -1068,7 +1149,9 @@
     document.getElementById('brandProgram').textContent = window.COURSE.meta.metaInfo || '設計與時尚學院';
     document.getElementById('brandTitle').textContent = window.COURSE.meta.title;
 
-    // Render chapters
+    // Render chapters（講師個人介紹置於課程最上方）
+    const instructorSection = renderInstructor();
+    if (instructorSection) content.append(instructorSection);
     content.append(renderOverview(window.COURSE.meta));
     content.append(renderSharedCase(window.COURSE.sharedCase));
     content.append(renderEcosystem());
